@@ -1,0 +1,128 @@
+You are working in the repo `fpl-radar`.
+
+Create a high-quality `README.md` for this project. The README should be clear, technical, and professional — suitable for a serious open-source or portfolio-grade backend project.
+
+## Project Context
+- `fpl-radar` is a backend engine for Fantasy Premier League analysis.
+- The core differentiator is **predicting likely transfers by rivals in a specific mini-league**, based on constraints, behaviour, and form.
+- This is not just a stats API — it is a **decision-support system**.
+- The backend is designed to support a future frontend (web app), but is currently API- and worker-focused.
+
+## Tone & Style
+- Clear, concise, confident
+- No hype, no marketing fluff
+- Assume the reader is a developer
+- Use British English
+- Use Markdown headings, bullet points, and code blocks appropriately
+
+## README Structure (must follow this order)
+
+### 1. Title & Short Description
+- Project name: `fpl-radar`
+- One-paragraph summary explaining *what it does* and *why it exists*
+- Emphasise:
+  - Rival transfer prediction
+  - Mini-league focus
+  - Probabilistic / risk-aware insights
+
+### 2. Core Idea (Killer Feature)
+Explain, in plain but precise terms:
+- The problem: FPL managers don’t know what rivals are likely to do
+- The solution: model rival constraints + behaviour to predict likely transfers
+- Examples:
+  - “Which players are most likely to be sold?”
+  - “Which bandwagons are my rivals likely to follow?”
+  - “How risky is a differential given what my league might do?”
+
+This section should make it obvious why the project is interesting.
+
+### 3. High-Level Architecture
+Describe the system components:
+- API service (Fastify)
+- Worker service (BullMQ)
+- PostgreSQL (Prisma)
+- Redis (caching + queues)
+- FPL public API as upstream data source
+
+Include a small ASCII-style architecture diagram if helpful (optional, not required).
+
+### 4. Tech Stack
+Bullet list:
+- Node.js + TypeScript
+- Fastify
+- PostgreSQL + Prisma
+- Redis + BullMQ
+- Zod
+- Pino
+- Vitest (if present)
+
+Keep it factual.
+
+### 5. Data Flow Overview
+Briefly describe:
+- Fetching FPL public data
+- Persisting reference data (teams, players, gameweeks)
+- League ingestion
+- Rival analysis & prediction pipeline
+
+This should help a new contributor understand *how data moves* through the system.
+
+### 6. Getting Started (Local Development)
+Include:
+- Prerequisites (Node version, pnpm, Postgres, Redis)
+- Install dependencies
+- Environment setup (`.env.example`)
+- Running the API
+- Running the worker
+- Running bootstrap ingestion
+
+Use real commands where possible:
+- `pnpm install`
+- `pnpm dev`
+- `pnpm ingest:bootstrap`
+
+### 7. Scripts
+List key `package.json` scripts with short explanations.
+
+### 8. Current Status
+Be explicit:
+- Foundations complete
+- Reference data ingestion in progress
+- Rival prediction engine planned
+
+This sets expectations clearly.
+
+### 9. Roadmap (Short)
+Bullet list of upcoming milestones:
+- League ingestion
+- Rival transfer prediction
+- Public API for frontend
+- Risk-mode insights
+
+Do not over-promise.
+
+### 10. Non-Goals (Important)
+Add a short section clarifying what this project is *not*:
+- Not an official FPL API
+- Not real-time
+- Not guaranteed predictions
+
+This increases credibility.
+
+### 11. License / Disclaimer
+- State that this project uses publicly available FPL endpoints
+- Add a short disclaimer that it is not affiliated with the Premier League or FPL
+
+## Constraints
+- Do not include badges yet
+- Do not include screenshots
+- Do not include contribution guidelines yet
+- Keep the README under ~2–3 pages when rendered
+- No emojis
+
+## Output
+- Create or overwrite `README.md`
+- Ensure Markdown renders cleanly on GitHub
+- Use consistent heading levels
+
+Implement this directly in the repo.
