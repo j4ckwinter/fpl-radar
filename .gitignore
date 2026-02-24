@@ -1,25 +1,53 @@
-# Node
+# --------------------
+# Node / Build output
+# --------------------
 node_modules/
 dist/
+.tmp/
+.cache/
 
-# Env
+# --------------------
+# Environment files
+# --------------------
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
+# --------------------
 # Prisma
+# --------------------
 prisma/dev.db
+prisma/*.db
+prisma/*.db-journal
 
+# Prisma generate output (optional, safe to ignore)
+# prisma/generated/
+
+# --------------------
 # Logs
+# --------------------
 logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# OS / Editor
+# --------------------
+# Coverage / test output
+# --------------------
+coverage/
+.nyc_output/
+
+# --------------------
+# Editor / OS
+# --------------------
 .DS_Store
 .idea/
 .vscode/
+*.swp
 
-# Coverage
-coverage/
+# --------------------
+# Docker (for later)
+# --------------------
+docker-data/
