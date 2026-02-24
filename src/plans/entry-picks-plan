@@ -1,0 +1,93 @@
+You are working in the repo `fpl-radar`.
+
+Implement Issue #10: Fetch and store entry picks for the current gameweek (squad snapshots) for all entries in a league.
+
+This builds on:
+- Issue #7: `FplClient` exists
+- Issue #8: reference tables exist (teams/players/positions/gameweeks + snapshot table)
+- Issue #9: league + league entries are persisted
+
+## Goal
+Given a `leagueId`, fetch each league entry’s picks for a target gameweek and persist a “squad snapshot” that includes:
+- the 15 picked players (element ids)
+- starting XI vs bench order
+- captain/vice captain flags
+- entry history values that matter for transfers (bank, value, free transfers if available)
+- timestamps for when the snapshot was fetched
+
+The pipeline must:
+- handle many entries efficiently (concurrency limit)
+- be idempotent (upsert per entry+gameweek)
+- tolerate partial failures (continue if 1 entry fails, record error)
+- be runnable via a script now, and reusable from the worker later
+
+Do NOT implement prediction logic yet.
+
+---
+
+## Important API notes
+The public endpoint needed:
+- `GET /api/entry/{entryId}/event/{eventId}/picks/`
+
+This typically includes:
+- `picks[]` with `{ element, position, is_captain, is_vice_captain, multiplier }`
+- `entry_history` with values like `bank`, `value`, `event_transfers`, `event_transfers_cost`, etc.
+Field names may differ slightly; use Zod to validate only what you need and allow passthrough for unknown fields.
+
+Also:
+- Determine `eventId` (gameweek) from `bootstrap-static` events where `is_next` or `is_current` depending on time.
+Default behaviour:
+- Use `is_next === true` gameweek as “upcoming deadline”
+- If none, fall back to `is_current` or latest unfinished
+Allow overriding with `FPL_EVENT_ID` env var.
+
+---
+
+## Deliverables
+
+### A) Prisma schema changes
+Add models:
+
+#### 1) `FplEntrySnapshot`
+Represents one entry’s squad state for a given gameweek.
+Fields:
+- `id` String @id @default(cuid())
+- `leagueId` Int  (FK -> FplLeague)
+- `entryId` Int   (FK -> FplLeagueEntry via id; or keep as scalar if you prefer)
+- `eventId` Int   (FK -> FplGameweek)
+- `bank` Int?     (tenths; from entry_history.bank)
+- `teamValue` Int? (tenths; from entry_history.value)
+- `eventTransfers` Int? (optional)
+- `eventTransfersCost` Int? (optional)
+- `fetchedAt` DateTime @default(now())
+- `createdAt` DateTime @default(now())
+- `updatedAt` DateTime @updatedAt
+
+Constraints:
+- Unique composite: `(leagueId, entryId, eventId)`
+
+Indexes:
+- `(leagueId, eventId)`
+- `(entryId, eventId)`
+
+#### 2) `FplEntryPick`
+Represents the 15 picks belonging to a snapshot.
+Fields:
+- `id` String @id @default(cuid())
+- `snapshotId` String (FK -> FplEntrySnapshot)
+- `playerId` Int (FK -> FplPlayer id / FPL element id)
+- `pickPosition` Int (1..15 as returned by FPL)
+- `multiplier` Int
+- `isCaptain` Boolean
+- `isViceCaptain` Boolean
+
+Constraints:
+- Unique composite: `(snapshotId, pickPosition)`
+- Optional: Unique composite `(snapshotId, playerId)` (careful: in rare data bugs duplicates could exist)
+
+Relation:
+- Snapshot 1 → many Picks with cascade delete
+
+After schema updates, run:
+```bash
+pnpm exec prisma migrate dev --name fpl_entry_snapshots

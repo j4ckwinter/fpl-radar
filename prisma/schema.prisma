@@ -53,21 +53,23 @@ model FplPlayer {
 }
 
 model FplGameweek {
-  id           Int      @id
-  name         String
-  deadlineTime DateTime
-  finished     Boolean
-  isCurrent    Boolean
-  isNext       Boolean
-  updatedAt    DateTime @updatedAt
+  id              Int      @id
+  name            String
+  deadlineTime    DateTime
+  finished        Boolean
+  isCurrent       Boolean
+  isNext          Boolean
+  updatedAt       DateTime @updatedAt
+  entrySnapshots  FplEntrySnapshot[]
 }
 
 model FplLeague {
-  id        Int      @id
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  entries   FplLeagueEntry[]
+  id               Int      @id
+  name             String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  entries          FplLeagueEntry[]
+  entrySnapshots   FplEntrySnapshot[]
 }
 
 model FplLeagueEntry {
@@ -83,4 +85,38 @@ model FplLeagueEntry {
 
   @@index([leagueId])
   @@index([leagueId, rank])
+}
+
+model FplEntrySnapshot {
+  id                  String   @id @default(cuid())
+  leagueId            Int
+  entryId             Int
+  eventId             Int
+  bank                Int?
+  teamValue           Int?
+  eventTransfers      Int?
+  eventTransfersCost  Int?
+  fetchedAt           DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  league              FplLeague   @relation(fields: [leagueId], references: [id])
+  event               FplGameweek  @relation(fields: [eventId], references: [id])
+  picks               FplEntryPick[]
+
+  @@unique([leagueId, entryId, eventId])
+  @@index([leagueId, eventId])
+  @@index([entryId, eventId])
+}
+
+model FplEntryPick {
+  id          String  @id @default(cuid())
+  snapshotId  String
+  playerId    Int
+  pickPosition Int
+  multiplier  Int
+  isCaptain   Boolean
+  isViceCaptain Boolean
+  snapshot    FplEntrySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, pickPosition])
 }
