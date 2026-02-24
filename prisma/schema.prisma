@@ -47,6 +47,8 @@ model FplPlayer {
   updatedAt         DateTime    @updatedAt
   team              FplTeam     @relation(fields: [teamId], references: [id])
   position          FplPosition @relation(fields: [positionId], references: [id])
+  transfersIn       FplEntryTransfer[] @relation("TransferPlayerIn")
+  transfersOut      FplEntryTransfer[] @relation("TransferPlayerOut")
 
   @@index([teamId])
   @@index([positionId])
@@ -61,6 +63,7 @@ model FplGameweek {
   isNext          Boolean
   updatedAt       DateTime @updatedAt
   entrySnapshots  FplEntrySnapshot[]
+  entryTransfers  FplEntryTransfer[]
 }
 
 model FplLeague {
@@ -82,6 +85,8 @@ model FplLeagueEntry {
   totalPoints Int
   updatedAt DateTime  @updatedAt
   league    FplLeague  @relation(fields: [leagueId], references: [id])
+  transfers FplEntryTransfer[]
+  behaviourProfile FplEntryBehaviourProfile?
 
   @@index([leagueId])
   @@index([leagueId, rank])
@@ -119,4 +124,38 @@ model FplEntryPick {
   snapshot    FplEntrySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   @@unique([snapshotId, pickPosition])
+}
+
+model FplEntryTransfer {
+  id          String   @id @default(cuid())
+  entryId     Int
+  eventId     Int
+  time        DateTime
+  playerInId  Int
+  playerOutId Int
+  value       Int?
+  bank        Int?
+  cost        Int?
+  createdAt   DateTime @default(now())
+  entry       FplLeagueEntry @relation(fields: [entryId], references: [id])
+  event       FplGameweek    @relation(fields: [eventId], references: [id])
+  playerIn    FplPlayer      @relation("TransferPlayerIn", fields: [playerInId], references: [id])
+  playerOut   FplPlayer      @relation("TransferPlayerOut", fields: [playerOutId], references: [id])
+
+  @@unique([entryId, eventId, time, playerInId, playerOutId])
+  @@index([entryId, eventId])
+  @@index([playerInId])
+  @@index([playerOutId])
+}
+
+model FplEntryBehaviourProfile {
+  entryId           Int      @id
+  transfersCount    Int
+  hitsCount         Int
+  totalHitCost      Int
+  avgTransfersPerGw Float
+  hitRate           Float
+  lastTransferAt    DateTime?
+  updatedAt         DateTime @updatedAt
+  entry             FplLeagueEntry @relation(fields: [entryId], references: [id])
 }

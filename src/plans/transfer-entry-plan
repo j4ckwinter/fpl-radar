@@ -1,0 +1,92 @@
+You are working in the repo `fpl-radar`.
+
+Implement Issue #11: Fetch and store entry transfer history (public endpoint) and derive a lightweight behaviour profile per entry.
+
+This builds on:
+- Issue #7: `FplClient` exists and has HTTP/caching/Zod patterns
+- Issue #8: reference tables exist
+- Issue #9: league + league entries persisted
+- Issue #10: entry snapshots/picks persisted (optional dependency, but useful)
+
+## Goal
+For each entry (manager) in a league:
+1) Fetch their transfer history via public FPL API
+2) Persist raw transfer events (structured, queryable)
+3) Derive and store a simple `behaviour profile` used later in rival transfer prediction (risk appetite etc.)
+
+The pipeline must:
+- handle many entries efficiently with a concurrency limit
+- be idempotent (no duplicate transfers)
+- tolerate partial failures (continue if an entry fails)
+- be runnable via a script now and reusable by a worker later
+
+Do NOT implement prediction logic yet.
+
+---
+
+## FPL endpoints required
+Public transfers endpoint:
+- `GET /api/entry/{entryId}/transfers/`
+
+This returns an array of transfer records. Typical fields include:
+- `element_in`, `element_out` (player ids)
+- `event` (gameweek)
+- `time` (timestamp)
+- `value`, `bank` (ints in tenths)
+- `cost` (hit cost for that transfer batch; may be repeated)
+- `points` / `points_on_bench` sometimes appear depending on season
+
+Treat upstream fields defensively. Validate only what you need.
+
+---
+
+## Deliverables
+
+### A) Prisma schema changes
+Add models:
+
+#### 1) `FplEntryTransfer`
+Represents a single recorded transfer action for an entry.
+Fields:
+- `id` String @id @default(cuid())
+- `entryId` Int
+- `eventId` Int
+- `time` DateTime
+- `playerInId` Int
+- `playerOutId` Int
+- `value` Int?        (team value after transfer, tenths)
+- `bank` Int?         (bank after transfer, tenths)
+- `cost` Int?         (hit cost associated, if present)
+- `createdAt` DateTime @default(now())
+
+Constraints:
+- Unique composite to prevent duplicates:
+  - `(entryId, eventId, time, playerInId, playerOutId)`
+Indexes:
+- `(entryId, eventId)`
+- `(playerInId)`
+- `(playerOutId)`
+
+Foreign keys:
+- `entryId` → `FplLeagueEntry.id` (or keep scalar if relation is awkward)
+- `eventId` → `FplGameweek.id`
+- `playerInId/playerOutId` → `FplPlayer.id`
+
+#### 2) `FplEntryBehaviourProfile`
+Derived stats used for later prediction weighting.
+Fields:
+- `entryId` Int @id
+- `transfersCount` Int
+- `hitsCount` Int                 (number of times cost > 0)
+- `totalHitCost` Int              (sum of costs)
+- `avgTransfersPerGw` Float
+- `hitRate` Float                 (hitsCount / number of active GWs with transfers)
+- `lastTransferAt` DateTime?
+- `updatedAt` DateTime @updatedAt
+
+Optional extra (nice but not required):
+- `earlyTransferRate` Float (transfers made >24h before deadline vs late; only if deadlines available)
+
+Run migration:
+```bash
+pnpm exec prisma migrate dev --name fpl_entry_transfers
