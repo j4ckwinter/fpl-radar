@@ -19,6 +19,7 @@
     "predict:sells": "tsx src/scripts/score-sells.ts",
     "predict:buys": "tsx src/scripts/score-buys.ts",
     "predict:transfers": "tsx src/scripts/predict-transfers.ts",
+    "predict:league-radar": "tsx src/scripts/league-radar.ts",
     "postinstall": "prisma generate"
   },
   "keywords": [],
