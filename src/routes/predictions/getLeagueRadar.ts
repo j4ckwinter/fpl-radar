@@ -2,6 +2,10 @@ import { z } from "zod";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma";
 import {
+  ensureGameweekStarted,
+  resolveStartedEventIdFromDb,
+} from "../../lib/gameweek";
+import {
   generateLeagueRadar,
   type LeagueRadarLogger,
 } from "../../prediction/leagueRadar/generate";
@@ -21,23 +25,7 @@ export type GetLeagueRadarParams = z.infer<typeof paramsSchema>;
 export type GetLeagueRadarQuery = z.infer<typeof querySchema>;
 
 async function resolveEventIdFromDb(): Promise<number | null> {
-  const next = await prisma.fplGameweek.findFirst({
-    where: { isNext: true },
-    select: { id: true },
-  });
-  if (next) return next.id;
-
-  const current = await prisma.fplGameweek.findFirst({
-    where: { isCurrent: true },
-    select: { id: true },
-  });
-  if (current) return current.id;
-
-  const latest = await prisma.fplGameweek.findFirst({
-    orderBy: { id: "desc" },
-    select: { id: true },
-  });
-  return latest?.id ?? null;
+  return resolveStartedEventIdFromDb(prisma);
 }
 
 /**
@@ -81,6 +69,16 @@ export async function getLeagueRadarHandler(
       error: "Bad Request",
       message:
         "No gameweek available. Set eventId in query or run bootstrap ingestion.",
+    });
+    return;
+  }
+
+  const gameweekError = await ensureGameweekStarted(prisma, eventId);
+  if (gameweekError !== null) {
+    await reply.status(400).send({
+      error: "Bad Request",
+      code: gameweekError.code,
+      message: gameweekError.message,
     });
     return;
   }

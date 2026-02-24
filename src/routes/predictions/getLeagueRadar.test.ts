@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../../lib/prisma", () => ({
   prisma: {
-    fplGameweek: { findFirst: vi.fn() },
+    fplGameweek: { findFirst: vi.fn(), findUnique: vi.fn() },
     fplLeague: { findUnique: vi.fn() },
   },
 }));
@@ -75,9 +75,16 @@ function leagueRadarResult(overrides: Partial<{ leagueId: number; eventId: numbe
   };
 }
 
+const startedGameweek = {
+  id: eventId,
+  name: "GW26",
+  deadlineTime: new Date(0),
+};
+
 describe("getLeagueRadarHandler", () => {
   beforeEach(() => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue(startedGameweek);
     vi.mocked(prisma.fplLeague.findUnique).mockResolvedValue(null);
     vi.mocked(generateLeagueRadar).mockResolvedValue(leagueRadarResult());
   });

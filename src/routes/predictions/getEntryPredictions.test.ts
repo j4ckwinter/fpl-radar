@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../../lib/prisma", () => ({
   prisma: {
-    fplGameweek: { findFirst: vi.fn() },
+    fplGameweek: { findFirst: vi.fn(), findUnique: vi.fn() },
     fplLeagueEntry: { findFirst: vi.fn() },
     fplPlayer: { findMany: vi.fn() },
   },
@@ -158,6 +158,11 @@ describe("getEntryPredictionsHandler", () => {
 
   it("returns 404 when entry not in league", async () => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue({ id: eventId });
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue({
+      id: eventId,
+      name: "GW26",
+      deadlineTime: new Date(0),
+    });
     vi.mocked(prisma.fplLeagueEntry.findFirst).mockResolvedValue(null);
     const request = mockRequest();
     const reply = mockReply();
@@ -173,6 +178,11 @@ describe("getEntryPredictionsHandler", () => {
 
   it("returns cached response on cache hit without calling prediction engine", async () => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue({ id: eventId });
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue({
+      id: eventId,
+      name: "GW26",
+      deadlineTime: new Date(0),
+    });
     const cached = {
       meta: { leagueId, entryId, eventId, generatedAt: "2026-02-24T12:00:00.000Z" },
       predictions: [],
@@ -193,6 +203,11 @@ describe("getEntryPredictionsHandler", () => {
 
   it("returns 409 with SNAPSHOT_MISSING when prediction throws SquadNotFoundError", async () => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue({ id: eventId });
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue({
+      id: eventId,
+      name: "GW26",
+      deadlineTime: new Date(0),
+    });
     vi.mocked(predictTransfersForEntry).mockRejectedValue(
       new SquadNotFoundError("No snapshot", { leagueId, entryId, eventId })
     );
@@ -211,6 +226,11 @@ describe("getEntryPredictionsHandler", () => {
 
   it("returns 409 with SNAPSHOT_MISSING when prediction throws InvalidSquadError", async () => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue({ id: eventId });
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue({
+      id: eventId,
+      name: "GW26",
+      deadlineTime: new Date(0),
+    });
     vi.mocked(predictTransfersForEntry).mockRejectedValue(
       new InvalidSquadError("Invalid squad", { leagueId, entryId, eventId })
     );
@@ -225,6 +245,11 @@ describe("getEntryPredictionsHandler", () => {
 
   it("returns 200 with meta and enriched predictions when engine returns data", async () => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue({ id: eventId });
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue({
+      id: eventId,
+      name: "GW26",
+      deadlineTime: new Date(0),
+    });
     const preds = [
       predictionRow(1, 2, { score: 80, probability: 0.5 }),
     ];
@@ -260,6 +285,11 @@ describe("getEntryPredictionsHandler", () => {
 
   it("calls predictTransfersForEntry with leagueId, entryId, eventId and limit", async () => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue({ id: eventId });
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue({
+      id: eventId,
+      name: "GW26",
+      deadlineTime: new Date(0),
+    });
     vi.mocked(predictTransfersForEntry).mockResolvedValue({ predictions: [] });
     const request = mockRequest({}, { eventId: "26", limit: "10" });
     const reply = mockReply();
@@ -276,6 +306,11 @@ describe("getEntryPredictionsHandler", () => {
 
   it("sets cache with correct key and TTL after successful response", async () => {
     vi.mocked(prisma.fplGameweek.findFirst).mockResolvedValue({ id: eventId });
+    vi.mocked(prisma.fplGameweek.findUnique).mockResolvedValue({
+      id: eventId,
+      name: "GW26",
+      deadlineTime: new Date(0),
+    });
     vi.mocked(predictTransfersForEntry).mockResolvedValue({ predictions: [] });
     const setSpy = vi.fn().mockResolvedValue(undefined);
     vi.mocked(getCache).mockResolvedValue({

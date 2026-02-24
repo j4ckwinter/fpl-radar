@@ -191,7 +191,9 @@ async function runWithConcurrency<T, R>(
  */
 export async function ingestLeagueEntryTransfers(params: {
   leagueId: number;
+  entryIds?: number[];
   concurrency?: number;
+  onProgress?: (completed: number, total: number) => void;
   logger: IngestionLogger;
 }): Promise<IngestLeagueEntryTransfersResult> {
   const { leagueId, logger } = params;
@@ -200,16 +202,25 @@ export async function ingestLeagueEntryTransfers(params: {
   const cache = await getCache();
   const client = new FplClient({ cache, logger });
 
-  const entries = await prisma.fplLeagueEntry.findMany({
-    where: { leagueId },
-    select: { id: true },
-  });
+  const entries =
+    params.entryIds !== undefined && params.entryIds.length > 0
+      ? params.entryIds.map((id) => ({ id }))
+      : await prisma.fplLeagueEntry.findMany({
+          where: { leagueId },
+          select: { id: true },
+        });
 
+  const total = entries.length;
+  let completed = 0;
   const results = await runWithConcurrency(entries, concurrency, async (entry) => {
     try {
       const { insertedCount } = await processEntry(prisma, client, entry.id);
+      completed += 1;
+      params.onProgress?.(completed, total);
       return { status: "ok" as const, insertedCount };
     } catch (err) {
+      completed += 1;
+      params.onProgress?.(completed, total);
       logger.error(
         { err, leagueId, entryId: entry.id },
         "entry transfers ingestion failed for entry"

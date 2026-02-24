@@ -139,7 +139,9 @@ async function runWithConcurrency<T, R>(
 export async function ingestLeagueEntryPicks(params: {
   leagueId: number;
   eventId?: number;
+  entryIds?: number[];
   concurrency?: number;
+  onProgress?: (completed: number, total: number) => void;
   logger: IngestionLogger;
 }): Promise<IngestLeagueEntryPicksResult> {
   const { leagueId, logger } = params;
@@ -163,11 +165,16 @@ export async function ingestLeagueEntryPicks(params: {
   const eventId: number = resolved.eventId;
   const eventFinished = resolved.eventFinished;
 
-  const entries = await prisma.fplLeagueEntry.findMany({
-    where: { leagueId },
-    select: { id: true },
-  });
+  const entries =
+    params.entryIds !== undefined && params.entryIds.length > 0
+      ? params.entryIds.map((id) => ({ id }))
+      : await prisma.fplLeagueEntry.findMany({
+          where: { leagueId },
+          select: { id: true },
+        });
 
+  const total = entries.length;
+  let completed = 0;
   const results = await runWithConcurrency(entries, concurrency, async (entry) => {
     try {
       await processEntry(prisma, client, {
@@ -176,8 +183,12 @@ export async function ingestLeagueEntryPicks(params: {
         eventId,
         eventFinished,
       });
+      completed += 1;
+      params.onProgress?.(completed, total);
       return "ok" as const;
     } catch (err) {
+      completed += 1;
+      params.onProgress?.(completed, total);
       logger.error(
         { err, leagueId, entryId: entry.id, eventId },
         "entry picks ingestion failed for entry"
