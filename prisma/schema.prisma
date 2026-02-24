@@ -6,7 +6,58 @@ datasource db {
   provider = "postgresql"
 }
 
-model Healthcheck {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
+model FplBootstrapSnapshot {
+  id               String   @id @default(cuid())
+  fetchedAt        DateTime @default(now())
+  source           String   @default("bootstrap-static")
+  hash             String?
+  teamsCount       Int
+  playersCount     Int
+  positionsCount   Int
+  gameweeksCount   Int
+}
+
+model FplTeam {
+  id         Int      @id
+  name       String
+  shortName  String
+  code       Int?
+  updatedAt  DateTime @updatedAt
+  players    FplPlayer[]
+}
+
+model FplPosition {
+  id         Int      @id
+  shortName  String
+  updatedAt  DateTime @updatedAt
+  players    FplPlayer[]
+}
+
+model FplPlayer {
+  id                Int         @id
+  teamId            Int
+  positionId        Int
+  firstName         String
+  secondName        String
+  webName           String
+  nowCost           Int
+  status            String
+  news              String?
+  selectedByPercent Float?
+  updatedAt         DateTime    @updatedAt
+  team              FplTeam     @relation(fields: [teamId], references: [id])
+  position          FplPosition @relation(fields: [positionId], references: [id])
+
+  @@index([teamId])
+  @@index([positionId])
+}
+
+model FplGameweek {
+  id           Int      @id
+  name         String
+  deadlineTime DateTime
+  finished     Boolean
+  isCurrent    Boolean
+  isNext       Boolean
+  updatedAt    DateTime @updatedAt
 }

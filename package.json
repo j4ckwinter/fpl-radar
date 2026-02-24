@@ -10,7 +10,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "worker": "tsx watch src/worker.ts",
-    "prisma": "prisma"
+    "prisma": "prisma",
+    "ingest:bootstrap": "tsx src/scripts/ingest-bootstrap.ts"
   },
   "keywords": [],
   "author": "",

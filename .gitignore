@@ -5,6 +5,8 @@ node_modules/
 dist/
 .tmp/
 .cache/
+.pnpm-store
+.pnpm-store/
 
 # --------------------
 # Environment files
