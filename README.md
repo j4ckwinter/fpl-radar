@@ -91,7 +91,7 @@ cp .env.example .env
 
 Edit `.env` and set at least:
 
-- `DATABASE_URL` – PostgreSQL connection string (e.g. `postgresql://user:password@localhost:5432/fpl_radar`)
+- `DATABASE_URL` – PostgreSQL connection string (e.g. `postgresql://USER:PASSWORD@localhost:5432/fpl_radar`)
 - `REDIS_URL` – (optional) e.g. `redis://localhost:6379`
 - `FPL_LEAGUE_ID` – (optional) default test league ID, e.g. `133057`
 

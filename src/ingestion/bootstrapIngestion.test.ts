@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseSelectedByPercent,
   parseDeadlineTime,
-} from "./bootstrapIngestion";
+} from "./bootstrapIngestion.utils";
 
 describe("bootstrapIngestion mappers", () => {
   describe("parseSelectedByPercent", () => {

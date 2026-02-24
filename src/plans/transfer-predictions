@@ -1,0 +1,85 @@
+You are working in the repo `fpl-radar`.
+
+Implement Issue #12: Generate legal 1-transfer candidates per rival (within a league) for a given gameweek, using persisted snapshots/picks and reference data.
+
+This step creates the “candidate generation” layer for the rival transfer prediction engine. It must be correct and explainable. Do NOT implement scoring/probabilities yet (that is Issue #13–#15).
+
+Assume Issue #8–#11 are complete:
+- Reference data persisted: players/teams/positions/gameweeks
+- League standings persisted
+- Entry snapshots + picks persisted for a target `eventId`
+- Entry transfers persisted and behaviour profiles exist (optional input, not required here)
+
+---
+
+## Goal
+Given:
+- `leagueId`
+- `entryId` (a rival manager in that league)
+- `eventId` (gameweek snapshot)
+
+Generate a set of legal single transfers `OUT -> IN` that the rival could make, subject to constraints:
+- Budget constraint (bank + sell value >= buy price)
+- Position constraint (OUT and IN same position) for v1 (no formation change modelling)
+- Max 3 players per real team
+- Can’t bring in a player already owned
+- Must produce only valid 15-player squads
+
+Output should include:
+- candidate transfers list, each with:
+  - outPlayerId
+  - inPlayerId
+  - estimatedCostDelta (in tenths)
+  - resultingBank (tenths)
+  - constraint checks (for debugging / later “reasons”)
+- diagnostics: how many candidates were generated and why candidates were filtered
+
+This will be used later by scoring/probability steps.
+
+---
+
+## Important simplifications for v1
+- 1 transfer only (no double transfers)
+- Same-position swap only
+- Use current `nowCost` for buy price
+- For sell price:
+  - If we have per-entry “purchase price / selling price” from public API we can’t reliably; so v1 use `nowCost` as sell price too.
+  - Document this as an approximation in code comments and output field naming (`estimatedSellPrice`).
+- Do not model chips, wildcard, free hit
+- Do not require knowing “free transfers remaining” (not reliably public)
+
+---
+
+## Deliverables
+
+### A) Domain types
+Create:
+- `src/prediction/types.ts`
+
+Define types:
+```ts
+export interface SquadState {
+  entryId: number;
+  leagueId: number;
+  eventId: number;
+  bank: number | null; // tenths
+  players: Array<{ playerId: number; teamId: number; positionId: number; nowCost: number }>;
+}
+
+export interface TransferCandidate {
+  outPlayerId: number;
+  inPlayerId: number;
+  outTeamId: number;
+  inTeamId: number;
+  positionId: number;
+  estimatedSellPrice: number;
+  buyPrice: number;
+  estimatedCostDelta: number; // buy - sell
+  resultingBank: number | null;
+  checks: {
+    budgetOk: boolean;
+    alreadyOwned: boolean;
+    teamLimitOk: boolean;
+    positionOk: boolean;
+  };
+}

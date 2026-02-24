@@ -1,6 +1,10 @@
 import { getCache } from "../lib/cache/cache";
 import { prisma } from "../lib/prisma";
 import { FplClient } from "../fpl/fplClient";
+import {
+  parseDeadlineTime,
+  parseSelectedByPercent,
+} from "./bootstrapIngestion.utils";
 
 export interface IngestionLogger {
   info(obj: object, msg?: string): void;
@@ -19,16 +23,7 @@ export interface IngestBootstrapStaticResult {
   };
 }
 
-export function parseSelectedByPercent(value: string): number | null {
-  const n = Number.parseFloat(value);
-  return Number.isNaN(n) ? null : n;
-}
-
-export function parseDeadlineTime(iso: string): Date {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) throw new Error(`Invalid deadline_time: ${iso}`);
-  return d;
-}
+export { parseDeadlineTime, parseSelectedByPercent };
 
 export async function ingestBootstrapStatic(opts: {
   logger: IngestionLogger;
