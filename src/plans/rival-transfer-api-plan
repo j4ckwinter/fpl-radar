@@ -1,0 +1,235 @@
+You are working in the repo `fpl-radar`.
+
+Implement **Issue #18: API – fetch rival transfer predictions**.
+
+This endpoint returns computed predictions (and optionally cached/persisted results if you already do that) for:
+- a single rival entry in a league, and/or
+- the league-wide radar output (Issue #16)
+
+Start with per-entry predictions (required). League radar can be added as an optional query mode if already implemented.
+
+Assume:
+- Issue #15 exists: `predictTransfersForEntry({ leagueId, entryId, eventId })`
+- Issue #16 may exist: `generateLeagueRadar({ leagueId, eventId })` (optional)
+- League entries exist in DB
+- Snapshots exist for the requested eventId (or you handle missing gracefully)
+- Fastify server and Zod validation exist from Issue #17
+
+Do NOT trigger ingestion jobs here (that is Issue #19). This endpoint is read-only and computes on demand.
+
+---
+
+## Goal
+Expose an API endpoint to retrieve transfer predictions in a frontend-friendly format:
+- per-entry: top predicted transfers with probabilities and reasons
+- include minimal player display data (webName, team shortName, position shortName, nowCost)
+- include basic metadata: leagueId, entryId, eventId, generatedAt
+
+Must validate inputs and handle missing data.
+
+---
+
+## API Contract
+
+### Route (per-entry predictions)
+`GET /league/:leagueId/entry/:entryId/predictions`
+
+### Query params
+- `eventId` (optional; if missing resolve from DB: prefer isNext else isCurrent)
+- `limit` (optional; default 20; max 100)
+
+### Response
+```json
+{
+  "meta": {
+    "leagueId": 123,
+    "entryId": 456,
+    "eventId": 26,
+    "generatedAt": "2026-02-24T12:00:00.000Z"
+  },
+  "predictions": [
+    {
+      "out": {
+        "playerId": 1,
+        "webName": "Saka",
+        "team": { "id": 1, "shortName": "ARS" },
+        "position": { "id": 3, "shortName": "MID" },
+        "nowCost": 85
+      },
+      "in": {
+        "playerId": 2,
+        "webName": "Foden",
+        "team": { "id": 11, "shortName": "MCI" },
+        "position": { "id": 3, "shortName": "MID" },
+        "nowCost": 90
+      },
+      "score": 78,
+      "probability": 0.22,
+      "estimatedCostDelta": 5,
+      "resultingBank": 10,
+      "reasons": ["Flagged / availability concern", "High ownership / template target"]
+    }
+  ]
+}
+```
+
+Notes:
+
+- nowCost, estimatedCostDelta, resultingBank are in tenths
+
+- Reasons are short strings
+
+- Keep payload lean: no massive feature dumps
+
+Optional route (league radar)
+
+If Issue #16 exists:
+GET /league/:leagueId/radar
+Query:
+
+- eventId optional (same resolve rule)
+
+- maxEntries optional
+
+- concurrency optional
+
+Returns LeagueRadarResult (or a frontend-friendly subset).
+This is optional; implement only if #16 is done and it’s straightforward.
+
+Deliverables
+A) Route + handler (per-entry)
+
+Create:
+
+- src/routes/predictions/getEntryPredictions.ts
+
+Responsibilities:
+
+1) Validate params and query with Zod:
+
+- leagueId int
+
+- entryId int
+
+- limit 1..100 default 20
+
+- eventId optional int
+
+2) Resolve eventId if missing:
+
+- Query FplGameweek:
+
+- - prefer isNext == true
+
+- - else isCurrent == true
+
+- If none found, return 400 with helpful message
+
+3) Ensure the entry belongs to the league:
+
+- Check FplLeagueEntry exists with (id=entryId, leagueId)
+
+- If not, 404
+
+4) Call prediction engine:
+
+- predictTransfersForEntry({ leagueId, entryId, eventId, maxResults: limit })
+
+- If snapshot missing for that entry/eventId, return 409 or 404:
+
+- - Prefer 409 Conflict: “Snapshot missing, run ingestion”
+
+- - Return structured error code: SNAPSHOT_MISSING
+
+5) Enrich predictions with display fields:
+
+- Collect all distinct playerIds from outs and ins
+
+- Query DB once for those players including: webName, nowCost, teamId, positionId
+
+- Query teams once for team shortName
+
+- Query positions once for position shortName
+
+- Join into response objects
+
+6) Return response in the contract format
+
+
+B) Route registration
+
+Register under a sensible prefix:
+
+- /league/:leagueId/entry/:entryId/predictions
+
+C) Error handling
+
+- 400 invalid input
+
+- 404 league/entry not found or entry not in league
+
+- 409 snapshot missing (include error code)
+
+- 500 unexpected
+
+
+D) Optional: caching layer
+
+If Redis cache exists and is easy:
+
+1) Cache computed response for short TTL (e.g. 60 seconds) by key:
+
+- predictions:league:{leagueId}:entry:{entryId}:event:{eventId}:limit:{limit}
+This is optional; do not overcomplicate.
+
+
+E) Optional: league radar endpoint
+
+If Issue #16 exists:
+Create:
+
+- src/routes/predictions/getLeagueRadar.ts
+
+Route:
+
+- GET /league/:leagueId/radar
+
+Query:
+
+- eventId optional (resolve)
+
+- maxEntries optional
+
+- concurrency optional
+
+Returns generateLeagueRadar(...) output.
+
+Acceptance Criteria
+
+- GET /league/:leagueId/entry/:entryId/predictions returns predictions with enriched player display data
+
+- Input validation works and errors are clear
+
+- Handles missing snapshots gracefully (409 with code)
+
+- Uses efficient DB access (one query for players, not per prediction)
+
+- Does not trigger ingestion or jobs
+
+- Runs fast enough for a typical request
+
+Implementation Order
+
+1) Add route skeleton + Zod validation
+
+2) Add eventId resolution
+
+3) Entry-in-league check
+
+4) Call prediction engine
+
+5) Add enrichment queries and response mapping
+
+6) Register route and test via curl/Postman
+
+Keep scope focused: per-entry predictions endpoint first.

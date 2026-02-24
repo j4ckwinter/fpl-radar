@@ -111,6 +111,16 @@ pnpm dev          # API (Fastify) on PORT, with tsx watch
 pnpm worker       # Worker (BullMQ) with tsx watch
 ```
 
+### Quick verification (league overview)
+
+With the API running and league data ingested, you can hit the league overview endpoint:
+
+```bash
+curl "http://localhost:3000/league/123?limit=50&offset=0"
+```
+
+Replace `123` with a `leagueId` that exists in your DB (e.g. your `FPL_LEAGUE_ID`).
+
 ---
 
 ## Scripts

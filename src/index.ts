@@ -1,8 +1,26 @@
 import "dotenv/config";
 import Fastify from "fastify";
 import { prisma } from "./lib/prisma";
+import { registerRoutes } from "./routes";
 
 const app = Fastify({ logger: true });
+
+app.register(registerRoutes);
+
+app.setErrorHandler(async (err, request, reply) => {
+  request.log.error(
+    { err, method: request.method, url: request.url },
+    "unexpected error"
+  );
+  if (reply.sent) return;
+  const isProduction = process.env.NODE_ENV === "production";
+  await reply.status(500).send({
+    error: "Internal Server Error",
+    message: isProduction
+      ? "An unexpected error occurred"
+      : (err as Error).message,
+  });
+});
 
 // TODO: add auth for /admin routes
 app.get("/admin/bootstrap/latest", async (_request, reply) => {

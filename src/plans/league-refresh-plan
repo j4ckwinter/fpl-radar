@@ -1,0 +1,276 @@
+You are working in the repo `fpl-radar`.
+
+Implement **Issue #19: API – trigger league refresh and recompute**.
+
+This endpoint lets the frontend ask the backend to refresh data for a league and recompute predictions asynchronously via the worker queue. It should return quickly with a job id and status.
+
+Important: This endpoint should NOT do the ingestion work inline. It should enqueue jobs (BullMQ) and return.
+
+Assume:
+- BullMQ worker exists (foundation #4)
+- Ingestion scripts/modules exist:
+  - bootstrap reference ingestion (Issue #8) – optional to run every time
+  - league standings ingestion (Issue #9)
+  - entry picks ingestion (Issue #10)
+  - entry transfers ingestion (Issue #11)
+- Prediction modules exist (#15 and #16)
+- Redis is available for the queue
+- Fastify server exists and can register routes
+
+If some modules don’t exist yet, stub the pipeline but keep the job orchestration correct.
+
+---
+
+## Goal
+Create:
+- `POST /league/:leagueId/refresh`
+
+that:
+1) validates input
+2) enqueues a “refresh pipeline” job for the league
+3) returns `{ jobId, status }`
+4) optionally exposes a status endpoint to poll job progress
+
+The refresh pipeline should:
+- ingest standings
+- ingest entry picks for target eventId
+- ingest entry transfers
+- (optional) generate league radar and cache/persist output
+
+---
+
+## API Contract
+
+### Route
+`POST /league/:leagueId/refresh`
+
+### Body (optional)
+```json
+{
+  "eventId": 26,
+  "maxEntries": 50,
+  "force": false
+}
+```
+
+Rules:
+
+- eventId optional: if omitted, worker resolves next/current
+
+- maxEntries optional: limit the number of entries processed (for speed)
+
+- force optional: bypass cache/dedupe and run anyway
+
+Response
+```json
+{
+  "leagueId": 123,
+  "jobId": "12345",
+  "status": "queued"
+}
+```
+
+Optional status endpoint
+
+GET /jobs/:jobId
+Response:
+```json
+{
+  "jobId": "12345",
+  "state": "active|completed|failed|waiting",
+  "progress": { "step": "picks", "completed": 25, "total": 50 },
+  "result": null,
+  "error": null
+}
+```
+
+Deliverables
+A) Queue + job definitions
+
+Create:
+
+- src/jobs/queues.ts
+
+Exports:
+
+- leagueRefreshQueue (BullMQ Queue instance)
+
+- shared queue name constants
+
+Create:
+
+- src/jobs/types.ts
+Define job payload:
+
+```ts
+export interface LeagueRefreshJobPayload {
+  leagueId: number;
+  eventId?: number;
+  maxEntries?: number;
+  force?: boolean;
+}
+```
+
+Create:
+
+- src/jobs/enqueue.ts
+Export:
+```ts
+export async function enqueueLeagueRefresh(payload: LeagueRefreshJobPayload): Promise<{ jobId: string }>
+```
+
+Job options:
+
+- removeOnComplete true (or keep last N)
+
+- removeOnFail false (keep failures)
+
+- Use jobId dedupe when force=false:
+
+- - jobId string like league-refresh:${leagueId}:${eventId ?? "auto"}:${maxEntries ?? "all"}
+
+- - If a job with same ID exists, return that job id instead of creating a new one
+
+
+B) Worker processor
+
+Create:
+
+- src/jobs/processors/leagueRefresh.ts
+
+Export processor function:
+```ts
+export async function processLeagueRefresh(job: Job<LeagueRefreshJobPayload>): Promise<{ ok: true }>
+```
+
+Responsibilities (run in order):
+
+1) Resolve eventId if missing:
+
+- from DB gameweeks (isNext else isCurrent), or via FplClient bootstrap events if needed
+
+2) Ingest league standings:
+
+- call ingestLeagueStandings({ leagueId })
+
+3) Determine entries to process:
+
+- load entry IDs from DB ordered by rank; apply maxEntries if provided
+
+4) Ingest entry picks for those entries for that event:
+
+- prefer a function that can accept a list of entryIds (add this if not present)
+
+- if existing ingestion only accepts leagueId, extend it carefully to accept entryId subset
+
+- update job.progress after every N entries
+
+5) Ingest entry transfers for those entries:
+
+- same subset behaviour + progress updates
+
+6) (Optional) Generate league radar:
+
+- call generateLeagueRadar({ leagueId, eventId, maxEntries })
+
+- store in Redis cache with TTL (e.g. 60s–5m) OR persist in DB if you already have a table; otherwise skip persistence and just compute later on demand
+
+7) Return { ok: true }
+
+Progress updates:
+
+- Use BullMQ job.updateProgress({ step, completed, total }) at each stage and within loops.
+
+Error handling:
+
+- If a stage fails:
+
+- - throw error (job fails)
+
+- - ensure logs include leagueId, stage, root cause
+
+C) Wire worker entrypoint
+
+Update src/worker.ts to:
+
+- create BullMQ Worker bound to leagueRefreshQueue
+
+- register the processor
+
+- log lifecycle events (completed/failed)
+
+D) API routes
+
+Create:
+
+- src/routes/league/postRefreshLeague.ts
+POST /league/:leagueId/refresh
+
+- Validate params/body via Zod
+
+- Call enqueueLeagueRefresh
+
+- Return { leagueId, jobId, status: "queued" }
+
+Create optional status route:
+
+- src/routes/jobs/getJobStatus.ts
+GET /jobs/:jobId
+
+- Query BullMQ for job by id
+
+- Return state, progress, failure reason, result (if completed)
+
+Register routes in server.
+
+E) Config + docs
+
+- Add .env.example entries if needed:
+
+- - REDIS_URL must be set for queues
+
+- Update README:
+
+- - How to run worker
+
+- - How to trigger refresh and poll job status
+
+Acceptance Criteria
+
+- POST /league/:leagueId/refresh returns quickly with a jobId
+
+- Worker processes the job and executes stages in order
+
+- Progress updates are visible via GET /jobs/:jobId
+
+- Repeated refresh calls dedupe when force=false
+
+- force=true always enqueues a new job
+
+- Failures are captured and job marked failed with a useful error message
+
+- No ingestion work runs in the API process (only in worker)
+
+Implementation Order
+
+1) Queue + enqueue helper with dedupe
+
+2) Worker processor with staged pipeline + progress
+
+3) Update worker entrypoint to run the queue
+
+4) Implement API POST route
+
+5) Implement job status route
+
+6) Manual test:
+
+- start redis
+
+- start worker
+
+- POST refresh
+
+- poll status
+
+Keep scope tight: orchestration only. No new scoring logic.

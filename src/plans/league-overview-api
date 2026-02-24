@@ -1,0 +1,170 @@
+You are working in the repo `fpl-radar`.
+
+Implement **Issue #17: API – fetch league overview and rivals**.
+
+This is the first “real” API endpoint for the future frontend. It should return the league metadata and the list of rivals (entries) with rank/points and basic context needed by the UI.
+
+Do NOT return predictions here (that is Issue #18). Do NOT trigger ingestion here (that is Issue #19). Keep it read-only.
+
+Assume:
+- League standings are already ingested into DB (Issue #9)
+- Reference data exists (Issue #8) but is not required for this endpoint
+- Fastify server is set up or partially set up (foundations). If not, complete minimal wiring needed for routes.
+
+---
+
+## Goal
+Create an endpoint that returns:
+- League metadata (id, name, lastUpdated)
+- Rivals list (entries) with rank, lastRank, totalPoints, entryName, playerName
+- Simple pagination support (optional but recommended)
+- Optionally include “last fetched” timestamp if you store it (league updatedAt is fine)
+
+---
+
+## API Contract
+
+### Route
+`GET /league/:leagueId`
+
+### Query params
+- `limit` (optional, default 50, max 200)
+- `offset` (optional, default 0)
+- `eventId` (optional) — if provided, include whether we have a snapshot for that entry for that event (boolean), but do not fetch snapshot data. This is optional; implement only if easy.
+
+### Response (JSON)
+```json
+{
+  "league": {
+    "id": 123,
+    "name": "My Mini League",
+    "updatedAt": "2026-02-24T09:00:00.000Z"
+  },
+  "rivals": [
+    {
+      "entryId": 111,
+      "entryName": "Team Name",
+      "playerName": "Manager Name",
+      "rank": 1,
+      "lastRank": 2,
+      "totalPoints": 1450,
+      "hasSnapshot": true
+    }
+  ],
+  "page": {
+    "limit": 50,
+    "offset": 0,
+    "total": 37
+  }
+}
+```
+
+If eventId not provided, omit hasSnapshot or set it to null.
+
+Deliverables
+
+A) Route + handler
+
+Create:
+
+- src/routes/league/getLeague.ts
+
+Handler responsibilities:
+
+1) Validate params and query using Zod:
+
+- - leagueId must be int
+
+- - limit and offset are ints with bounds
+
+- - eventId optional int
+
+2) Query DB:
+
+- Find league by id; if not found, return 404
+
+- Count total league entries for pagination
+
+- Fetch league entries ordered by rank asc:
+
+- - take: limit
+
+- - skip: offset
+
+3) If eventId is provided:
+
+- For the returned page of entries, query FplEntrySnapshot where: leagueId, eventId, entryId IN (...)
+
+- Build a Set of entryIds that have snapshots
+
+- Add hasSnapshot boolean per rival
+
+- Make this a single query (not per entry)
+
+Return response object in the contract format.
+
+
+B) Route registration
+
+Ensure route is registered in your Fastify server:
+
+- Add to a route index, e.g. src/routes/index.ts
+
+- Register under a prefix /league
+
+If the server isn’t fully wired yet, implement minimal Fastify server startup:
+
+- src/api/server.ts creates a fastify instance
+
+- src/index.ts calls buildServer() and listen()
+
+
+C) Error handling
+
+- 400 for invalid params
+
+- 404 if league not found
+
+- 500 with safe logging for unexpected errors
+
+- Do not leak internal error stacks in responses in production mode
+
+
+D) (Optional but recommended) OpenAPI
+
+If swagger is already in place:
+
+- Add route schema so it appears in OpenAPI docs. If not, add TODO and keep Zod validation.
+
+E) Script-free verification
+
+Add a quick cURL example to README (optional):
+
+curl "http://localhost:3000/league/123?limit=50&offset=0"
+
+
+Acceptance Criteria
+
+- GET /league/:leagueId returns league + ordered rivals list from DB
+
+- Pagination works (limit/offset/total)
+
+- Invalid inputs return 400
+
+- Missing league returns 404
+
+- If eventId provided, hasSnapshot is computed via a single query
+
+- No upstream FPL API calls in this endpoint (DB only)
+
+Implementation Order
+
+1. Add Zod validation for params/query
+
+2. Implement handler with Prisma queries
+
+3. Register route in server
+
+4. Manual test with a leagueId that exists in your DB
+
+Keep scope tight: this endpoint is the “league overview” only.
