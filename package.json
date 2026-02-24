@@ -16,6 +16,7 @@
     "ingest:entry-picks": "tsx src/scripts/ingest-entry-picks.ts",
     "ingest:entry-transfers": "tsx src/scripts/ingest-entry-transfers.ts",
     "predict:candidates": "tsx src/scripts/generate-candidates.ts",
+    "predict:sells": "tsx src/scripts/score-sells.ts",
     "postinstall": "prisma generate"
   },
   "keywords": [],

@@ -19,5 +19,7 @@ export {
   type InPoolPlayer,
 } from "./inPoolBuilder";
 export { loadSquadState } from "./squadLoader";
+export { scoreSellCandidates, type ScoreSellCandidatesParams } from "./sellScoring";
+export type { SellCandidateScore } from "./sellScoring";
 export { SquadNotFoundError, InvalidSquadError } from "./errors";
 export type { SquadState, TransferCandidate } from "./types";
