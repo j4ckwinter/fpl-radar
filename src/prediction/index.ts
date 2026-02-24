@@ -21,5 +21,7 @@ export {
 export { loadSquadState } from "./squadLoader";
 export { scoreSellCandidates, type ScoreSellCandidatesParams } from "./sellScoring";
 export type { SellCandidateScore } from "./sellScoring";
+export { scoreBuyCandidates, type ScoreBuyCandidatesParams } from "./buyScoring";
+export type { BuyCandidateScore } from "./buyScoring";
 export { SquadNotFoundError, InvalidSquadError } from "./errors";
 export type { SquadState, TransferCandidate } from "./types";
