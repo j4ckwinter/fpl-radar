@@ -1,14 +1,8 @@
-import type { PrismaClient } from "../generated/prisma";
-import type { SquadState, TransferCandidate } from "./types";
-
-const MAX_PLAYERS_PER_TEAM = 3;
-
-export interface PlayerReference {
-  id: number;
-  teamId: number;
-  positionId: number;
-  nowCost: number;
-}
+import type { PrismaClient } from "../../generated/prisma";
+import type { SquadState, TransferCandidate } from "../types";
+import { MAX_PLAYERS_PER_TEAM } from "./constants";
+import { createEmptyDiagnostics, countTeamInSquad } from "./generate.utils";
+import type { CandidateDiagnostics, PlayerReference } from "./types";
 
 /**
  * Loads the squad state for a given entry and gameweek from persisted snapshot and picks.
@@ -68,15 +62,6 @@ export async function getSquadState(
   };
 }
 
-export interface CandidateDiagnostics {
-  squadPlayersCount: number;
-  totalOutInPairsConsidered: number;
-  filteredByBudget: number;
-  filteredByAlreadyOwned: number;
-  filteredByTeamLimit: number;
-  legalCandidatesCount: number;
-}
-
 /**
  * Generates legal single-transfer candidates (OUT → IN, same position) for a rival entry
  * for the given gameweek. Uses current nowCost for both sell and buy (v1 approximation;
@@ -90,14 +75,7 @@ export async function generateTransferCandidates(
   diagnostics: CandidateDiagnostics;
 }> {
   const squad = await getSquadState(prisma, params);
-  const diagnostics: CandidateDiagnostics = {
-    squadPlayersCount: 0,
-    totalOutInPairsConsidered: 0,
-    filteredByBudget: 0,
-    filteredByAlreadyOwned: 0,
-    filteredByTeamLimit: 0,
-    legalCandidatesCount: 0,
-  };
+  const diagnostics = createEmptyDiagnostics(0);
 
   if (!squad) {
     return { candidates: [], diagnostics };
@@ -142,23 +120,10 @@ export function generateCandidatesFromSquadState(
   squad: SquadState,
   playersByPosition: Map<number, PlayerReference[]>
 ): { candidates: TransferCandidate[]; diagnostics: CandidateDiagnostics } {
-  const diagnostics: CandidateDiagnostics = {
-    squadPlayersCount: squad.players.length,
-    totalOutInPairsConsidered: 0,
-    filteredByBudget: 0,
-    filteredByAlreadyOwned: 0,
-    filteredByTeamLimit: 0,
-    legalCandidatesCount: 0,
-  };
+  const diagnostics = createEmptyDiagnostics(squad.players.length);
 
   const squadPlayerIds = new Set(squad.players.map((p) => p.playerId));
   const bankValue = squad.bank ?? 0;
-
-  function countTeamInSquad(teamId: number, excludePlayerId: number | null): number {
-    return squad.players.filter(
-      (p) => p.teamId === teamId && p.playerId !== excludePlayerId
-    ).length;
-  }
 
   const candidates: TransferCandidate[] = [];
 
@@ -177,7 +142,11 @@ export function generateCandidatesFromSquadState(
       const resultingBank = bankValue + estimatedSellPrice - buyPrice;
       const budgetOk = bankValue + estimatedSellPrice >= buyPrice;
 
-      const countInTeamAfterSwap = countTeamInSquad(inPlayer.teamId, outPlayer.playerId);
+      const countInTeamAfterSwap = countTeamInSquad(
+        squad.players,
+        inPlayer.teamId,
+        outPlayer.playerId
+      );
       const teamLimitOk = countInTeamAfterSwap + 1 <= MAX_PLAYERS_PER_TEAM;
 
       diagnostics.totalOutInPairsConsidered += 1;

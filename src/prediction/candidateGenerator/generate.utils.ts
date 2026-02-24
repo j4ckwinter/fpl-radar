@@ -1,36 +1,10 @@
-import type { SquadState, TransferCandidate } from "./types";
-
-const MAX_PLAYERS_PER_TEAM = 3;
-
-export interface PlayerRow {
-  id: number;
-  teamId: number;
-  positionId: number;
-  nowCost: number;
-}
-
-export interface GenerateCandidatesResult {
-  candidates: TransferCandidate[];
-  stats: {
-    outPlayers: number;
-    inPool: number;
-    generated: number;
-    filteredBudget: number;
-    filteredOwned: number;
-    filteredTeamLimit: number;
-    filteredPosition: number;
-    truncated: boolean;
-    inPoolPerPositionLimit: number;
-    inPoolSizeByPosition: Record<number, number>;
-    inPoolSizeByPositionBeforeLimit: Record<number, number>;
-  };
-}
-
-export interface GenerateCandidatesOptions {
-  perPositionLimit?: number;
-  inPoolSizeByPosition?: Record<number, number>;
-  inPoolSizeByPositionBeforeLimit?: Record<number, number>;
-}
+import type { SquadState, TransferCandidate } from "../types";
+import { MAX_PLAYERS_PER_TEAM } from "./constants";
+import type {
+  GenerateCandidatesOptions,
+  GenerateCandidatesResult,
+  PlayerRow,
+} from "./types";
 
 /**
  * Pure candidate generation from squad and in-pool by position. Used by

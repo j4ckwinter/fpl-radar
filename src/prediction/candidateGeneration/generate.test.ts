@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
-import {
-  generateCandidatesFromSquadState,
-  type PlayerReference,
-} from "./candidateGeneration";
-import type { SquadState } from "./types";
+import { generateCandidatesFromSquadState } from "./generate";
+import type { PlayerReference } from "./types";
+import type { SquadState } from "../types";
 
 describe("generateCandidatesFromSquadState", () => {
   const positionGkp = 1;

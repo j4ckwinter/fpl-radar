@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
-import {
-  generateCandidatesFromSquadAndPool,
-  type PlayerRow,
-} from "./candidateGenerator.utils";
-import type { SquadState } from "./types";
+import { generateCandidatesFromSquadAndPool } from "./generate.utils";
+import type { PlayerRow } from "./types";
+import type { SquadState } from "../types";
 
 const positionGkp = 1;
 const positionDef = 2;
@@ -47,7 +45,7 @@ function byPosition(players: PlayerRow[]): Map<number, PlayerRow[]> {
   return m;
 }
 
-describe("candidateGenerator.utils", () => {
+describe("generate.utils", () => {
   describe("generateCandidatesFromSquadAndPool", () => {
     it("returns one legal candidate when one keeper can be swapped for another", () => {
       const s = squad([

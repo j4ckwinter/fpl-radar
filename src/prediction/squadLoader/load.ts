@@ -1,8 +1,9 @@
-import { prisma } from "../lib/prisma";
-import type { SquadState } from "./types";
-import { InvalidSquadError, SquadNotFoundError } from "./errors";
-
-const REQUIRED_SQUAD_SIZE = 15;
+import { prisma } from "../../lib/prisma";
+import type { SquadState } from "../types";
+import { InvalidSquadError, SquadNotFoundError } from "../errors";
+import { REQUIRED_SQUAD_SIZE } from "./constants";
+import { mapPicksToSquadPlayers } from "./load.utils";
+import type { LoadSquadStateParams, PlayerRow } from "./types";
 
 /**
  * Loads squad state for an entry and gameweek from persisted snapshot and picks.
@@ -10,11 +11,9 @@ const REQUIRED_SQUAD_SIZE = 15;
  * @throws SquadNotFoundError if no snapshot exists for the given params
  * @throws InvalidSquadError if snapshot exists but squad is not valid (e.g. not 15 players)
  */
-export async function loadSquadState(params: {
-  leagueId: number;
-  entryId: number;
-  eventId: number;
-}): Promise<SquadState> {
+export async function loadSquadState(
+  params: LoadSquadStateParams
+): Promise<SquadState> {
   const snapshot = await prisma.fplEntrySnapshot.findUnique({
     where: {
       leagueId_entryId_eventId: {
@@ -46,20 +45,10 @@ export async function loadSquadState(params: {
     select: { id: true, teamId: true, positionId: true, nowCost: true },
   });
 
-  const playerMap = new Map(players.map((p) => [p.id, p]));
-
-  const squadPlayers = snapshot.picks
-    .map((pick) => {
-      const p = playerMap.get(pick.playerId);
-      if (!p) return null;
-      return {
-        playerId: p.id,
-        teamId: p.teamId,
-        positionId: p.positionId,
-        nowCost: p.nowCost,
-      };
-    })
-    .filter((p): p is NonNullable<typeof p> => p !== null);
+  const playerMap = new Map(
+    (players as PlayerRow[]).map((p) => [p.id, p] as const)
+  );
+  const squadPlayers = mapPicksToSquadPlayers(snapshot.picks, playerMap);
 
   if (squadPlayers.length !== snapshot.picks.length) {
     throw new InvalidSquadError(

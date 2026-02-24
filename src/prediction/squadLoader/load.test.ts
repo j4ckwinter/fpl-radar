@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../lib/prisma", () => ({
+vi.mock("../../lib/prisma", () => ({
   prisma: {
     fplEntrySnapshot: {
       findUnique: vi.fn(),
@@ -11,9 +11,10 @@ vi.mock("../lib/prisma", () => ({
   },
 }));
 
-import { prisma } from "../lib/prisma";
-import { loadSquadState } from "./squadLoader";
-import { InvalidSquadError, SquadNotFoundError } from "./errors";
+import { prisma } from "../../lib/prisma";
+import { loadSquadState } from "./load";
+import { InvalidSquadError, SquadNotFoundError } from "../errors";
+import { REQUIRED_SQUAD_SIZE } from "./constants";
 
 const leagueId = 1;
 const entryId = 100;
@@ -123,7 +124,7 @@ describe("loadSquadState", () => {
     });
   });
 
-  it("throws InvalidSquadError when squad size is not 15", async () => {
+  it(`throws InvalidSquadError when squad size is not ${REQUIRED_SQUAD_SIZE}`, async () => {
     const picks = Array.from({ length: 14 }, (_, i) => ({ playerId: i + 1 }));
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshot(picks) as never
@@ -139,13 +140,15 @@ describe("loadSquadState", () => {
     await expect(
       loadSquadState({ leagueId, entryId, eventId })
     ).rejects.toMatchObject({
-      message: expect.stringMatching(/exactly 15 players.*got 14/),
+      message: expect.stringMatching(new RegExp(`exactly ${REQUIRED_SQUAD_SIZE} players.*got 14`)),
       params: { leagueId, entryId, eventId },
     });
   });
 
-  it("returns SquadState with bank and players when snapshot has 15 valid picks", async () => {
-    const picks = Array.from({ length: 15 }, (_, i) => ({ playerId: i + 1 }));
+  it(`returns SquadState with bank and players when snapshot has ${REQUIRED_SQUAD_SIZE} valid picks`, async () => {
+    const picks = Array.from({ length: REQUIRED_SQUAD_SIZE }, (_, i) => ({
+      playerId: i + 1,
+    }));
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshot(picks, 25) as never
     );
@@ -175,11 +178,13 @@ describe("loadSquadState", () => {
         }))
       ),
     });
-    expect(result.players).toHaveLength(15);
+    expect(result.players).toHaveLength(REQUIRED_SQUAD_SIZE);
   });
 
   it("passes bank null through when snapshot.bank is null", async () => {
-    const picks = Array.from({ length: 15 }, (_, i) => ({ playerId: i + 1 }));
+    const picks = Array.from({ length: REQUIRED_SQUAD_SIZE }, (_, i) => ({
+      playerId: i + 1,
+    }));
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshot(picks, null) as never
     );
@@ -190,11 +195,13 @@ describe("loadSquadState", () => {
     const result = await loadSquadState({ leagueId, entryId, eventId });
 
     expect(result.bank).toBeNull();
-    expect(result.players).toHaveLength(15);
+    expect(result.players).toHaveLength(REQUIRED_SQUAD_SIZE);
   });
 
   it("calls findUnique with compound key and findMany with pick player ids", async () => {
-    const picks = Array.from({ length: 15 }, (_, i) => ({ playerId: 100 + i }));
+    const picks = Array.from({ length: REQUIRED_SQUAD_SIZE }, (_, i) => ({
+      playerId: 100 + i,
+    }));
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshot(picks) as never
     );

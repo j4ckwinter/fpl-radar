@@ -1,20 +1,9 @@
-import type { SquadState } from "./types";
-import { DEFAULT_MAX_CANDIDATES, DEFAULT_IN_POOL_PER_POSITION } from "./constants";
-import { buildInPoolByPosition } from "./inPoolBuilder";
-import type { InPoolPlayer } from "./inPoolBuilder";
-import {
-  generateCandidatesFromSquadAndPool,
-  type GenerateCandidatesResult,
-  type PlayerRow,
-} from "./candidateGenerator.utils";
-
-export interface GenerateSingleTransferCandidatesParams {
-  squad: SquadState;
-  maxCandidates?: number;
-  perPositionInPoolLimit?: number;
-}
-
-export type { GenerateCandidatesResult as GenerateSingleTransferCandidatesResult } from "./candidateGenerator.utils";
+import type { SquadState } from "../types";
+import { DEFAULT_MAX_CANDIDATES, DEFAULT_IN_POOL_PER_POSITION } from "../constants";
+import { buildInPoolByPosition } from "../inPoolBuilder";
+import type { InPoolPlayer } from "../inPoolBuilder";
+import { generateCandidatesFromSquadAndPool } from "./generate.utils";
+import type { GenerateCandidatesResult, GenerateSingleTransferCandidatesParams, PlayerRow } from "./types";
 
 function inPoolToPlayerRows(inPoolByPosition: Map<number, InPoolPlayer[]>): Map<number, PlayerRow[]> {
   const map = new Map<number, PlayerRow[]>();

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../lib/prisma", () => ({
+vi.mock("../../lib/prisma", () => ({
   prisma: {
     fplPlayer: {
       findMany: vi.fn(),
@@ -8,8 +8,9 @@ vi.mock("../lib/prisma", () => ({
   },
 }));
 
-import { prisma } from "../lib/prisma";
-import { buildInPoolByPosition } from "./inPoolBuilder";
+import { prisma } from "../../lib/prisma";
+import { buildInPoolByPosition } from "./build";
+import { STATUS_UNAVAILABLE } from "./constants";
 
 const positionGkp = 1;
 const positionMid = 3;
@@ -64,7 +65,7 @@ describe("buildInPoolByPosition", () => {
     expect(list[0].playerId).toBe(2);
   });
 
-  it("sorts by selectedByPercent descending with nulls as -1", async () => {
+  it("sorts by selectedByPercent descending with nulls last", async () => {
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
       playerRow(1, { selectedByPercent: 10 }),
       playerRow(2, { selectedByPercent: null }),
@@ -111,13 +112,13 @@ describe("buildInPoolByPosition", () => {
       expect.objectContaining({
         where: {
           positionId: { in: [positionGkp] },
-          status: { not: "u" },
+          status: { not: STATUS_UNAVAILABLE },
         },
       })
     );
   });
 
-  it("queries only given positionIds and excludes status u", async () => {
+  it("queries only given positionIds and excludes unavailable status", async () => {
     await buildInPoolByPosition({
       ownedPlayerIds: new Set(),
       positionIds: [positionGkp, positionMid],
@@ -125,7 +126,7 @@ describe("buildInPoolByPosition", () => {
     expect(prisma.fplPlayer.findMany).toHaveBeenCalledWith({
       where: {
         positionId: { in: [positionGkp, positionMid] },
-        status: { not: "u" },
+        status: { not: STATUS_UNAVAILABLE },
       },
       select: {
         id: true,
