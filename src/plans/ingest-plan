@@ -58,3 +58,129 @@ Relations:
 After updating the schema, run:
 ```bash
 pnpm exec prisma migrate dev --name fpl_league_standings
+
+B) Ingestion logic
+
+Create:
+
+src/ingestion/leagueStandingsIngestion.ts
+
+Export:
+
+ingestLeagueStandings(params: {
+  leagueId: number;
+  logger: Logger;
+}): Promise<{
+  leagueId: number;
+  leagueName: string;
+  entriesCount: number;
+}>
+
+Responsibilities:
+
+Fetch league standings from FPL using FplClient.getLeagueStandings
+
+Handle pagination:
+
+Continue fetching pages until has_next === false
+
+Normalise data:
+
+league id + name
+
+entry id
+
+entry_name → entryName
+
+player_name → playerName
+
+total → totalPoints
+
+Upsert FplLeague
+
+Upsert all FplLeagueEntry rows
+
+Use upsert per entry OR createMany + update strategy
+
+Use a transaction where appropriate
+
+Return summary info (league name + entry count)
+
+Do NOT:
+
+Store historical ranks yet
+
+Store event/GW-specific standings
+
+Fetch picks or transfers
+
+C) Script to run ingestion
+
+Create:
+
+src/scripts/ingest-league.ts
+
+This script should:
+
+Load env (import "dotenv/config")
+
+Read FPL_LEAGUE_ID from env
+
+Validate that it exists and is a number
+
+Call ingestLeagueStandings
+
+Log:
+
+league id
+
+league name
+
+number of entries ingested
+
+Add script to package.json:
+
+"ingest:league": "tsx src/scripts/ingest-league.ts"
+D) Idempotency expectations
+
+Re-running:
+
+pnpm ingest:league
+
+should:
+
+Not create duplicate leagues
+
+Not create duplicate entries
+
+Update ranks and total points correctly
+
+E) Optional (nice-to-have, not required)
+
+Add a small helper to delete league entries that are no longer present (league member left)
+
+Log a warning if the league is very large (>100 entries)
+
+Acceptance Criteria
+
+League and entries appear in Postgres
+
+Pagination is handled correctly
+
+Script can be re-run safely
+
+No downstream assumptions (no picks, no transfers yet)
+
+Code is clean, readable, and follows existing ingestion patterns
+
+Implementation Order (important)
+
+Update Prisma schema and migrate
+
+Implement ingestion logic
+
+Add script + package.json command
+
+Run against a real league ID and verify DB contents
+
+Do all work directly in the repo. Keep scope limited to league standings only.

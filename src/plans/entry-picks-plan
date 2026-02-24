@@ -91,3 +91,172 @@ Relation:
 After schema updates, run:
 ```bash
 pnpm exec prisma migrate dev --name fpl_entry_snapshots
+```
+
+B) Zod schema for picks endpoint
+
+Create:
+
+src/fpl/schemas/entryPicks.schema.ts
+
+Validate minimum needed:
+
+picks: array of objects with:
+
+- element (number)
+
+- position (number)
+
+- multiplier (number)
+
+- is_captain (boolean)
+
+- is_vice_captain (boolean)
+
+entry_history: object with (all optional):
+
+- bank (number)
+
+- value (number)
+
+- event_transfers (number)
+
+- event_transfers_cost (number)
+
+Export types.
+
+Extend FplClient with:
+
+getEntryPicks(params: { entryId: number; eventId: number }): Promise<EntryPicksResponse>
+
+Use caching:
+
+cache key: entry:{entryId}:event:{eventId}:picks
+
+TTL: 60 seconds for current/next GW; 6 hours for finished GWs (simple rule: if event finished => long TTL)
+
+C) Ingestion logic
+
+Create:
+
+src/ingestion/entryPicksIngestion.ts
+
+Export:
+
+ingestLeagueEntryPicks(params: {
+  leagueId: number;
+  eventId?: number;
+  concurrency?: number; // default 5
+  logger: Logger;
+}): Promise<{
+  leagueId: number;
+  eventId: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+}>
+
+Responsibilities:
+
+Resolve eventId if not provided:
+
+read from env FPL_EVENT_ID if present
+
+else use FplClient.getBootstrapStatic() events:
+
+prefer is_next
+
+else is_current
+
+Load league entries from DB for that leagueId (from Issue #9)
+
+For each entryId:
+
+fetch picks via FplClient.getEntryPicks({ entryId, eventId })
+
+upsert FplEntrySnapshot (unique by leagueId+entryId+eventId)
+
+replace associated picks:
+
+simplest: delete existing FplEntryPick rows for snapshotId and insert new 15 rows
+
+do this inside a transaction per entry
+
+Concurrency control:
+
+implement a simple promise pool (no new deps required) OR use p-limit
+
+default concurrency = 5
+
+Partial failure handling:
+
+if one entry fails, log error and continue
+
+track success/fail counts
+
+Return summary
+
+Do NOT:
+
+compute transfer predictions
+
+fetch transfers history here
+
+Optional but useful:
+
+Store a per-entry error record in a simple table IngestionError (only if you feel it’s necessary; otherwise just log)
+
+D) Script
+
+Create:
+
+src/scripts/ingest-entry-picks.ts
+
+Behaviour:
+
+load env (dotenv/config)
+
+read FPL_LEAGUE_ID (required)
+
+optionally read FPL_EVENT_ID
+
+call ingestLeagueEntryPicks({ leagueId, eventId })
+
+print summary counts
+
+Add script:
+
+"ingest:entry-picks": "tsx src/scripts/ingest-entry-picks.ts"
+Acceptance Criteria
+
+Running pnpm ingest:entry-picks:
+
+fetches picks for each entry in the league
+
+writes one snapshot per entry for the resolved eventId
+
+writes 15 pick rows per snapshot
+
+Re-running the command updates snapshots and replaces picks without duplicates
+
+Works when Redis is disabled (falls back to memory cache)
+
+If 1 entry fails, the pipeline continues and reports failures
+
+Concurrency is respected (no unbounded parallelism)
+
+Implementation Order
+
+Prisma schema + migration
+
+Add schema + FplClient.getEntryPicks
+
+Implement ingestion module with concurrency + upsert/replace strategy
+
+Add script + run locally
+
+Verify in DB: snapshots count == league entries count (or less if failures)
+
+Keep scope limited to entry picks ingestion only.
+
+::contentReference[oaicite:0]{index=0}

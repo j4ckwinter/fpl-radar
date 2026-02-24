@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model FplBootstrapSnapshot {
+  id             String   @id @default(cuid())
+  fetchedAt      DateTime @default(now())
+  source         String   @default("bootstrap-static")
+  hash           String?
+  teamsCount     Int
+  playersCount   Int
+  positionsCount Int
+  gameweeksCount Int
+}
+
+model FplTeam {
+  id        Int         @id
+  name      String
+  shortName String
+  code      Int?
+  updatedAt DateTime    @updatedAt
+  players   FplPlayer[]
+}
+
+model FplPosition {
+  id        Int         @id
+  shortName String
+  updatedAt DateTime    @updatedAt
+  players   FplPlayer[]
+}
+
+model FplPlayer {
+  id                Int                @id
+  teamId            Int
+  positionId        Int
+  firstName         String
+  secondName        String
+  webName           String
+  nowCost           Int
+  status            String
+  news              String?
+  selectedByPercent Float?
+  updatedAt         DateTime           @updatedAt
+  team              FplTeam            @relation(fields: [teamId], references: [id])
+  position          FplPosition        @relation(fields: [positionId], references: [id])
+  transfersIn       FplEntryTransfer[] @relation("TransferPlayerIn")
+  transfersOut      FplEntryTransfer[] @relation("TransferPlayerOut")
+
+  @@index([teamId])
+  @@index([positionId])
+}
+
+model FplGameweek {
+  id             Int                @id
+  name           String
+  deadlineTime   DateTime
+  finished       Boolean
+  isCurrent      Boolean
+  isNext         Boolean
+  updatedAt      DateTime           @updatedAt
+  entrySnapshots FplEntrySnapshot[]
+  entryTransfers FplEntryTransfer[]
+}
+
+model FplLeague {
+  id             Int                @id
+  name           String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  entries        FplLeagueEntry[]
+  entrySnapshots FplEntrySnapshot[]
+}
+
+model FplLeagueEntry {
+  id               Int                       @id
+  leagueId         Int
+  entryName        String
+  playerName       String
+  rank             Int
+  lastRank         Int?
+  totalPoints      Int
+  updatedAt        DateTime                  @updatedAt
+  league           FplLeague                 @relation(fields: [leagueId], references: [id])
+  transfers        FplEntryTransfer[]
+  behaviourProfile FplEntryBehaviourProfile?
+
+  @@index([leagueId])
+  @@index([leagueId, rank])
+}
+
+model FplEntrySnapshot {
+  id                 String         @id @default(cuid())
+  leagueId           Int
+  entryId            Int
+  eventId            Int
+  bank               Int?
+  teamValue          Int?
+  eventTransfers     Int?
+  eventTransfersCost Int?
+  fetchedAt          DateTime       @default(now())
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  league             FplLeague      @relation(fields: [leagueId], references: [id])
+  event              FplGameweek    @relation(fields: [eventId], references: [id])
+  picks              FplEntryPick[]
+
+  @@unique([leagueId, entryId, eventId])
+  @@index([leagueId, eventId])
+  @@index([entryId, eventId])
+}
+
+model FplEntryPick {
+  id            String           @id @default(cuid())
+  snapshotId    String
+  playerId      Int
+  pickPosition  Int
+  multiplier    Int
+  isCaptain     Boolean
+  isViceCaptain Boolean
+  snapshot      FplEntrySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, pickPosition])
+}
+
+model FplEntryTransfer {
+  id          String         @id @default(cuid())
+  entryId     Int
+  eventId     Int
+  time        DateTime
+  playerInId  Int
+  playerOutId Int
+  value       Int?
+  bank        Int?
+  cost        Int?
+  createdAt   DateTime       @default(now())
+  entry       FplLeagueEntry @relation(fields: [entryId], references: [id])
+  event       FplGameweek    @relation(fields: [eventId], references: [id])
+  playerIn    FplPlayer      @relation("TransferPlayerIn", fields: [playerInId], references: [id])
+  playerOut   FplPlayer      @relation("TransferPlayerOut", fields: [playerOutId], references: [id])
+
+  @@unique([entryId, eventId, time, playerInId, playerOutId])
+  @@index([entryId, eventId])
+  @@index([playerInId])
+  @@index([playerOutId])
+}
+
+model FplEntryBehaviourProfile {
+  entryId           Int            @id
+  transfersCount    Int
+  hitsCount         Int
+  totalHitCost      Int
+  avgTransfersPerGw Float
+  hitRate           Float
+  lastTransferAt    DateTime?
+  updatedAt         DateTime       @updatedAt
+  entry             FplLeagueEntry @relation(fields: [entryId], references: [id])
+}

@@ -11,7 +11,12 @@
     "start": "node dist/index.js",
     "worker": "tsx watch src/worker.ts",
     "prisma": "prisma",
-    "ingest:bootstrap": "tsx src/scripts/ingest-bootstrap.ts"
+    "ingest:bootstrap": "tsx src/scripts/ingest-bootstrap.ts",
+    "ingest:league": "tsx src/scripts/ingest-league.ts",
+    "ingest:entry-picks": "tsx src/scripts/ingest-entry-picks.ts",
+    "ingest:entry-transfers": "tsx src/scripts/ingest-entry-transfers.ts",
+    "predict:candidates": "tsx src/scripts/generate-candidates.ts",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",

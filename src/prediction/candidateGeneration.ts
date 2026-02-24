@@ -1,24 +1,7 @@
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "../generated/prisma";
 import type { SquadState, TransferCandidate } from "./types";
 
 const MAX_PLAYERS_PER_TEAM = 3;
-
-/**
- * Minimal Prisma client shape for prediction. Use this type for the `prisma` parameter so that
- * delegates are recognised when the client is created with an adapter (PrismaClient<{ adapter }, ...>
- * can lose delegate types in some TS resolutions). Any PrismaClient instance is assignable to this.
- */
-export type PrismaForPrediction = {
-  fplEntrySnapshot: {
-    findUnique: (args: unknown) => Promise<{
-      bank: number | null;
-      picks: Array<{ playerId: number }>;
-    } | null>;
-  };
-  fplPlayer: {
-    findMany: (args: unknown) => Promise<Array<{ id: number; teamId: number; positionId: number; nowCost: number }>>;
-  };
-};
 
 export interface PlayerReference {
   id: number;
@@ -32,7 +15,7 @@ export interface PlayerReference {
  * Returns null if no snapshot exists for the given leagueId, entryId, eventId.
  */
 export async function getSquadState(
-  prisma: PrismaForPrediction,
+  prisma: PrismaClient,
   params: { leagueId: number; entryId: number; eventId: number }
 ): Promise<SquadState | null> {
   const snapshot = await prisma.fplEntrySnapshot.findUnique({
@@ -100,7 +83,7 @@ export interface CandidateDiagnostics {
  * per-entry purchase/sell price is not reliably available from the public API).
  */
 export async function generateTransferCandidates(
-  prisma: PrismaForPrediction,
+  prisma: PrismaClient,
   params: { leagueId: number; entryId: number; eventId: number }
 ): Promise<{
   candidates: TransferCandidate[];
