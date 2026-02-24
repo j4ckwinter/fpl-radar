@@ -1,0 +1,289 @@
+You are working in the repo `fpl-radar`.
+
+Implement **Issue #15: Compute rival transfer probabilities (OUT → IN)**.
+
+This step combines:
+- Legal candidate generation (Issue #12 + optional narrowing #12.5)
+- Sell scoring (Issue #13)
+- Buy scoring (Issue #14)
+- (Optional) Entry behaviour profile (Issue #11)
+
+to produce a ranked list of predicted transfers for a rival entry with a probability-like score and clear reasons.
+
+Do NOT implement league-wide aggregation yet (Issue #16).
+
+---
+
+## Goal
+Given:
+- `leagueId`
+- `entryId`
+- `eventId`
+
+Return:
+- Top N predicted transfers for that entry:
+  - `outPlayerId`
+  - `inPlayerId`
+  - `score` (0..100)
+  - `probability` (0..1) derived from scores (softmax-ish or normalised weights)
+  - `reasons[]` (short, explainable)
+  - key features for debugging (sellScore, buyScore, budget delta, team limit, etc.)
+
+This should feel like:
+- “Most likely moves” rather than exact truth
+- Deterministic and tunable
+- Fast enough to run per rival
+
+---
+
+## Inputs and dependencies
+Assume the following exist and are usable:
+- `generateSingleTransferCandidates` (Issue #12) (returns legal candidates + checks)
+- `scoreSellCandidates` (Issue #13) (returns sell scores for owned players)
+- `scoreBuyCandidates` (Issue #14) (returns buy scores for non-owned players)
+- `loadSquadState` (Issue #12) (returns bank + owned players)
+- DB tables: snapshots, picks, players, teams, behaviour profile (optional)
+
+No upstream FPL API calls should be added here; DB-only + in-process computation.
+
+---
+
+## Deliverables
+
+### A) Types
+Create:
+- `src/prediction/transferPrediction/types.ts`
+
+```ts
+export interface TransferPrediction {
+  outPlayerId: number;
+  inPlayerId: number;
+  score: number;        // 0..100
+  probability: number;  // 0..1, normalised across returned items
+  reasons: string[];
+  features: {
+    sellScore: number;
+    buyScore: number;
+    estimatedCostDelta: number;
+    resultingBank: number | null;
+    budgetOk: boolean;
+    teamLimitOk: boolean;
+    positionOk: boolean;
+  };
+}
+```
+
+B) Tunable weights/constants
+
+Create:
+
+- src/prediction/transferPrediction/constants.ts
+
+Suggested defaults (tune later):
+
+```ts
+export const TRANSFER_PREDICTION = {
+  MAX_RESULTS: 50,
+  MIN_SELL_SCORE: 15,     // ignore near-never sells to cut noise
+  MIN_BUY_SCORE: 15,      // ignore weak buys
+  W_SELL: 0.55,
+  W_BUY: 0.45,
+  BUDGET_UNKNOWN_PENALTY: 5, // slight penalty when bank is null
+  BIG_SPEND_PENALTY_THRESHOLD: 30, // £3.0m in tenths
+  BIG_SPEND_PENALTY: 10,
+} as const;
+```
+
+
+C) Core computation
+
+Create:
+
+- src/prediction/transferPrediction/predict.ts
+
+Export:
+
+```ts
+export async function predictTransfersForEntry(params: {
+  leagueId: number;
+  entryId: number;
+  eventId: number;
+  maxResults?: number; // default TRANSFER_PREDICTION.MAX_RESULTS
+}): Promise<{ predictions: TransferPrediction[] }>
+```
+
+Algorithm (deterministic, explainable):
+
+1) Load squad state:
+
+- bank (may be null)
+
+- owned playerIds
+
+2) Get sell scores:
+
+- scoreSellCandidates({ leagueId, entryId, eventId })
+
+- Build map sellByPlayerId
+
+3) Get buy scores:
+
+- scoreBuyCandidates({ leagueId, entryId, eventId, limit: 200 })
+
+- Build map buyByPlayerId
+
+- Note: buy scoring already excludes owned players
+
+4) Generate legal candidates:
+
+- generateSingleTransferCandidates({ squad, maxCandidates: 2000, perPositionInPoolLimit: ... })
+
+- This returns a list with constraint checks and cost deltas
+
+5) Pre-filter candidates to reduce noise:
+
+- Require sellScore >= MIN_SELL_SCORE
+
+- Require buyScore >= MIN_BUY_SCORE
+
+- Keep only candidates where:
+
+- - budgetOk true OR bank is null (still allow but penalise)
+
+- - teamLimitOk true
+
+- - positionOk true
+
+- If this yields 0, fall back to relaxing buy threshold (e.g. MIN_BUY_SCORE/2) but keep legality constraints.
+
+6) Compute combined score per candidate:
+
+- base = (W_SELL * sellScore) + (W_BUY * buyScore)
+
+- Penalties:
+
+- - if resultingBank is null => -BUDGET_UNKNOWN_PENALTY
+
+- - if estimatedCostDelta > BIG_SPEND_PENALTY_THRESHOLD => -BIG_SPEND_PENALTY
+
+- Clamp to [0, 100]
+
+- Attach reasons:
+
+- - From sell reasons (top 1–2)
+
+- - From buy reasons (top 1–2)
+
+- - If big spend penalty applied: "Requires significant budget"
+
+- - If bank unknown: "Bank unknown (estimate)"
+
+- Keep reasons concise: max 4.
+
+7) Sort candidates by score desc, take top maxResults.
+
+8) Convert scores to probability:
+
+- Use a stable softmax-ish transform so top few get meaningful mass without extreme spikes.
+
+- Example:
+
+- - temperature T = 15
+
+- - weight = exp((score - maxScore) / T)
+
+- - prob = weight / sum(weights)
+
+- Ensure probabilities sum to ~1 across returned predictions.
+
+- If only one prediction, prob = 1.
+
+9)Return predictions.
+
+Performance:
+
+- Avoid O(N) expensive string concatenations; build reasons from precomputed arrays.
+
+- Keep maps for sell/buy scores.
+
+
+D) Script for manual verification
+
+Create:
+
+- src/scripts/predict-transfers.ts
+
+Env:
+
+- FPL_LEAGUE_ID required
+
+- FPL_ENTRY_ID required
+
+- FPL_EVENT_ID optional (resolve next/current from DB if missing)
+
+Script:
+
+- call predictTransfersForEntry({ maxResults: 20 })
+
+- print top 20:
+
+- - OUT webName -> IN webName
+
+- - score, probability
+
+- - delta, bank (if known)
+
+- - reasons
+
+Add package.json script:
+
+"predict:transfers": "tsx src/scripts/predict-transfers.ts"
+
+
+E) Optional persistence (only if trivial)
+
+If you already have a TransferPrediction table planned, skip for now.
+This issue can return computed predictions without persisting them.
+(We can persist in Issue #16 or later.)
+
+Acceptance Criteria
+
+- pnpm predict:transfers runs for a real entry and returns >0 predictions
+
+- Output uses legal candidates only (constraints respected)
+
+- Top predictions make intuitive sense:
+
+- - high sellScore outs
+
+- - high buyScore ins
+
+- Probabilities sum to ~1 across returned results
+
+- No upstream API calls added
+
+- Weights and thresholds are centralised and easy to tune
+
+Notes / TODOs
+
+- Sell/buy scoring is heuristic v1. Probabilities are calibrated “relative likelihood”, not absolute truth.
+
+- Later incorporate behaviour profile weighting:
+
+- - high hitRate => allow higher-cost / multiple transfers
+
+- - low hitRate => penalise big deltas. But do NOT implement multi-transfer here.
+
+Implementation Order
+
+1) Types + constants
+
+2) Implement predictTransfersForEntry with maps + filtering + scoring
+
+3) Add softmax probability normaliser
+
+4) Add script + package.json
+
+5) Run and sanity-check a few predicted transfers
+
+Keep scope strictly to per-entry OUT→IN predictions only (no league aggregation).
