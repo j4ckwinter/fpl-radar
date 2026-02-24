@@ -3,10 +3,12 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma";
 import { ensureGameweekStarted } from "../../lib/gameweek";
 import { enqueueLeagueRefresh } from "../../jobs/enqueue";
-
-const paramsSchema = z.object({
-  leagueId: z.coerce.number().int().positive(),
-});
+import { leagueIdParamSchema } from "../shared/schemas";
+import {
+  sendBadRequest,
+  sendNotFound,
+  sendBadRequestGameweek,
+} from "../shared/replies";
 
 const bodySchema = z
   .object({
@@ -17,7 +19,7 @@ const bodySchema = z
   .optional()
   .default({});
 
-export type PostRefreshLeagueParams = z.infer<typeof paramsSchema>;
+export type PostRefreshLeagueParams = z.infer<typeof leagueIdParamSchema>;
 export type PostRefreshLeagueBody = z.infer<typeof bodySchema>;
 
 export interface PostRefreshLeagueResponse {
@@ -33,11 +35,9 @@ export async function postRefreshLeagueHandler(
   }>,
   reply: FastifyReply
 ): Promise<void> {
-  const paramsResult = paramsSchema.safeParse(request.params);
+  const paramsResult = leagueIdParamSchema.safeParse(request.params);
   if (!paramsResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid leagueId",
+    await sendBadRequest(reply, "Invalid leagueId", {
       details: paramsResult.error.flatten(),
     });
     return;
@@ -45,9 +45,7 @@ export async function postRefreshLeagueHandler(
 
   const bodyResult = bodySchema.safeParse(request.body ?? {});
   if (!bodyResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid body",
+    await sendBadRequest(reply, "Invalid body", {
       details: bodyResult.error.flatten(),
     });
     return;
@@ -61,21 +59,18 @@ export async function postRefreshLeagueHandler(
     select: { id: true },
   });
   if (!league) {
-    await reply.status(404).send({
-      error: "Not Found",
-      message: `League ${leagueId} not found`,
-    });
+    await sendNotFound(reply, `League ${leagueId} not found`);
     return;
   }
 
   if (body.eventId !== undefined) {
     const gameweekError = await ensureGameweekStarted(prisma, body.eventId);
     if (gameweekError !== null) {
-      await reply.status(400).send({
-        error: "Bad Request",
-        code: gameweekError.code,
-        message: gameweekError.message,
-      });
+      await sendBadRequestGameweek(
+        reply,
+        gameweekError.code,
+        gameweekError.message
+      );
       return;
     }
   }

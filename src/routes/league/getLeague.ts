@@ -1,13 +1,11 @@
 import { z } from "zod";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma";
+import { leagueIdParamSchema } from "../shared/schemas";
+import { sendBadRequest, sendNotFound } from "../shared/replies";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
-
-const paramsSchema = z.object({
-  leagueId: z.coerce.number().int().positive(),
-});
 
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
@@ -15,7 +13,7 @@ const querySchema = z.object({
   eventId: z.coerce.number().int().positive().optional(),
 });
 
-export type GetLeagueParams = z.infer<typeof paramsSchema>;
+export type GetLeagueParams = z.infer<typeof leagueIdParamSchema>;
 export type GetLeagueQuery = z.infer<typeof querySchema>;
 
 /** Response shape for GET /league/:leagueId; use for OpenAPI schema when Swagger is wired. */
@@ -48,11 +46,9 @@ export async function getLeagueHandler(
   }>,
   reply: FastifyReply
 ): Promise<void> {
-  const paramsResult = paramsSchema.safeParse(request.params);
+  const paramsResult = leagueIdParamSchema.safeParse(request.params);
   if (!paramsResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid leagueId",
+    await sendBadRequest(reply, "Invalid leagueId", {
       details: paramsResult.error.flatten(),
     });
     return;
@@ -60,9 +56,7 @@ export async function getLeagueHandler(
 
   const queryResult = querySchema.safeParse(request.query);
   if (!queryResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid query parameters",
+    await sendBadRequest(reply, "Invalid query parameters", {
       details: queryResult.error.flatten(),
     });
     return;
@@ -77,10 +71,7 @@ export async function getLeagueHandler(
   });
 
   if (!league) {
-    await reply.status(404).send({
-      error: "Not Found",
-      message: `League ${leagueId} not found`,
-    });
+    await sendNotFound(reply, `League ${leagueId} not found`);
     return;
   }
 

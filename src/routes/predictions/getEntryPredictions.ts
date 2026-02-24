@@ -2,12 +2,15 @@ import { z } from "zod";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { getCache } from "../../lib/cache/cache";
 import { prisma } from "../../lib/prisma";
-import {
-  ensureGameweekStarted,
-  resolveStartedEventIdFromDb,
-} from "../../lib/gameweek";
 import { predictTransfersForEntry } from "../../prediction";
 import { InvalidSquadError, SquadNotFoundError } from "../../prediction/errors";
+import { leagueEntryParamsSchema } from "../shared/schemas";
+import {
+  sendBadRequest,
+  sendNotFound,
+  sendBadRequestGameweek,
+} from "../shared/replies";
+import { resolveAndValidateEventId } from "../shared/eventId";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -22,17 +25,12 @@ function predictionsCacheKey(
   return `predictions:league:${leagueId}:entry:${entryId}:event:${eventId}:limit:${limit}`;
 }
 
-const paramsSchema = z.object({
-  leagueId: z.coerce.number().int().positive(),
-  entryId: z.coerce.number().int().positive(),
-});
-
 const querySchema = z.object({
   eventId: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
 });
 
-export type GetEntryPredictionsParams = z.infer<typeof paramsSchema>;
+export type GetEntryPredictionsParams = z.infer<typeof leagueEntryParamsSchema>;
 export type GetEntryPredictionsQuery = z.infer<typeof querySchema>;
 
 export interface EntryPredictionDisplay {
@@ -67,10 +65,6 @@ export interface GetEntryPredictionsResponse {
   predictions: EntryPredictionDisplay[];
 }
 
-async function resolveEventIdFromDb(): Promise<number | null> {
-  return resolveStartedEventIdFromDb(prisma);
-}
-
 /**
  * GET /league/:leagueId/entry/:entryId/predictions
  * Returns 400 invalid input; 404 entry not in league; 409 SNAPSHOT_MISSING; 500 unexpected.
@@ -82,11 +76,9 @@ export async function getEntryPredictionsHandler(
   }>,
   reply: FastifyReply
 ): Promise<void> {
-  const paramsResult = paramsSchema.safeParse(request.params);
+  const paramsResult = leagueEntryParamsSchema.safeParse(request.params);
   if (!paramsResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid leagueId or entryId",
+    await sendBadRequest(reply, "Invalid leagueId or entryId", {
       details: paramsResult.error.flatten(),
     });
     return;
@@ -94,9 +86,7 @@ export async function getEntryPredictionsHandler(
 
   const queryResult = querySchema.safeParse(request.query);
   if (!queryResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid query parameters",
+    await sendBadRequest(reply, "Invalid query parameters", {
       details: queryResult.error.flatten(),
     });
     return;
@@ -105,36 +95,27 @@ export async function getEntryPredictionsHandler(
   const { leagueId, entryId } = paramsResult.data;
   const { limit, eventId: eventIdQuery } = queryResult.data;
 
-  const eventId =
-    eventIdQuery ?? (await resolveEventIdFromDb());
-  if (eventId === null) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message:
-        "No gameweek available. Set eventId in query or run bootstrap ingestion.",
-    });
+  const eventIdResult = await resolveAndValidateEventId(prisma, eventIdQuery);
+  if ("error" in eventIdResult) {
+    if (eventIdResult.error.code !== undefined) {
+      await sendBadRequestGameweek(
+        reply,
+        eventIdResult.error.code,
+        eventIdResult.error.message
+      );
+    } else {
+      await sendBadRequest(reply, eventIdResult.error.message);
+    }
     return;
   }
-
-  const gameweekError = await ensureGameweekStarted(prisma, eventId);
-  if (gameweekError !== null) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      code: gameweekError.code,
-      message: gameweekError.message,
-    });
-    return;
-  }
+  const { eventId } = eventIdResult;
 
   const entry = await prisma.fplLeagueEntry.findFirst({
     where: { id: entryId, leagueId },
     select: { id: true },
   });
   if (!entry) {
-    await reply.status(404).send({
-      error: "Not Found",
-      message: `Entry ${entryId} not found in league ${leagueId}`,
-    });
+    await sendNotFound(reply, `Entry ${entryId} not found in league ${leagueId}`);
     return;
   }
 

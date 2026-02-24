@@ -1,21 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { BUY_SCORE } from "./constants";
-
-export interface BuyPoolPlayer {
-  id: number;
-  teamId: number;
-  positionId: number;
-  nowCost: number;
-  status: string;
-  news: string | null;
-  selectedByPercent: number | null;
-  webName: string;
-}
-
-export interface LoadBuyPoolParams {
-  ownedPlayerIds: Set<number>;
-  limit?: number;
-}
+import type { BuyPoolPlayer, LoadBuyPoolParams } from "./types";
 
 /**
  * Loads candidate pool for buy scoring: players not owned, ordered by selectedByPercent

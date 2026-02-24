@@ -2,58 +2,20 @@ import { prisma } from "../../lib/prisma";
 import { predictTransfersForEntry } from "../transferPrediction";
 import { LEAGUE_RADAR } from "./constants";
 import type {
+  GenerateLeagueRadarParams,
+  LeagueRadarEntryResult,
   LeagueRadarResult,
-  PlayerRadarItem,
+  RadarAccumulator,
   TransferRadarItem,
 } from "./types";
+import {
+  addToAccumulator,
+  getOrCreateAcc,
+  runWithConcurrency,
+  toPlayerRadarItems,
+} from "./generate.utils";
 
-export interface LeagueRadarLogger {
-  info(obj: object, msg?: string): void;
-  error(obj: object, msg?: string): void;
-}
-
-interface RadarAccumulator {
-  expectedCount: number;
-  entryIds: Set<number>;
-  examples: Array<{ entryId: number; probability: number }>;
-}
-
-function addToAccumulator(
-  acc: RadarAccumulator,
-  entryId: number,
-  probability: number
-): void {
-  acc.expectedCount += probability;
-  acc.entryIds.add(entryId);
-  acc.examples.push({ entryId, probability });
-  acc.examples.sort((a, b) => b.probability - a.probability);
-  if (acc.examples.length > LEAGUE_RADAR.MAX_EXAMPLES_PER_ITEM) {
-    acc.examples = acc.examples.slice(0, LEAGUE_RADAR.MAX_EXAMPLES_PER_ITEM);
-  }
-}
-
-async function runWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += concurrency) {
-    const chunk = items.slice(i, i + concurrency);
-    const chunkResults = await Promise.all(chunk.map(fn));
-    results.push(...chunkResults);
-  }
-  return results;
-}
-
-export interface GenerateLeagueRadarParams {
-  leagueId: number;
-  eventId: number;
-  maxEntries?: number;
-  concurrency?: number;
-  perEntryMaxResults?: number;
-  logger: LeagueRadarLogger;
-}
+export type { GenerateLeagueRadarParams, LeagueRadarLogger } from "./types";
 
 export async function generateLeagueRadar(
   params: GenerateLeagueRadarParams
@@ -78,14 +40,10 @@ export async function generateLeagueRadar(
 
   const totalEntries = entries.length;
 
-  type EntryResult =
-    | { status: "ok"; entryId: number; predictions: Array<{ outPlayerId: number; inPlayerId: number; probability: number; score: number }> }
-    | { status: "fail"; entryId: number; predictions: [] };
-
   const results = await runWithConcurrency(
     entries,
     concurrency,
-    async (entry): Promise<EntryResult> => {
+    async (entry): Promise<LeagueRadarEntryResult> => {
       try {
         const { predictions } = await predictTransfersForEntry({
           leagueId,
@@ -104,7 +62,10 @@ export async function generateLeagueRadar(
           })),
         };
       } catch (err) {
-        logger.error({ err, leagueId, entryId: entry.id }, "league radar: predict failed for entry");
+        logger.error(
+          { err, leagueId, entryId: entry.id },
+          "league radar: predict failed for entry"
+        );
         return { status: "fail", entryId: entry.id, predictions: [] };
       }
     }
@@ -117,72 +78,29 @@ export async function generateLeagueRadar(
   const sellMap = new Map<number, RadarAccumulator>();
   const transferMap = new Map<string, RadarAccumulator>();
 
-  function getOrCreatePlayerAcc(
-    map: Map<number, RadarAccumulator>,
-    key: number
-  ): RadarAccumulator {
-    let acc = map.get(key);
-    if (!acc) {
-      acc = { expectedCount: 0, entryIds: new Set(), examples: [] };
-      map.set(key, acc);
-    }
-    return acc;
-  }
-
-  function getOrCreateTransferAcc(
-    map: Map<string, RadarAccumulator>,
-    key: string
-  ): RadarAccumulator {
-    let acc = map.get(key);
-    if (!acc) {
-      acc = { expectedCount: 0, entryIds: new Set(), examples: [] };
-      map.set(key, acc);
-    }
-    return acc;
-  }
-
   for (const r of results) {
     if (r.status !== "ok") continue;
     for (const p of r.predictions) {
       addToAccumulator(
-        getOrCreatePlayerAcc(buyMap, p.inPlayerId),
+        getOrCreateAcc(buyMap, p.inPlayerId),
         r.entryId,
         p.probability
       );
       addToAccumulator(
-        getOrCreatePlayerAcc(sellMap, p.outPlayerId),
+        getOrCreateAcc(sellMap, p.outPlayerId),
         r.entryId,
         p.probability
       );
       const transferKey = `${p.outPlayerId}-${p.inPlayerId}`;
       addToAccumulator(
-        getOrCreateTransferAcc(transferMap, transferKey),
+        getOrCreateAcc(transferMap, transferKey),
         r.entryId,
         p.probability
       );
     }
   }
 
-  function toPlayerRadarItems(
-    map: Map<number, RadarAccumulator>,
-    topN: number
-  ): PlayerRadarItem[] {
-    return Array.from(map.entries())
-      .map(([playerId, acc]) => ({
-        playerId,
-        expectedCount: acc.expectedCount,
-        uniqueEntries: acc.entryIds.size,
-        examples: acc.examples,
-      }))
-      .sort((a, b) => {
-        if (b.expectedCount !== a.expectedCount) return b.expectedCount - a.expectedCount;
-        return b.uniqueEntries - a.uniqueEntries;
-      })
-      .slice(0, topN);
-  }
-
   const buyRadar = toPlayerRadarItems(buyMap, LEAGUE_RADAR.TOP_BUY_RADAR);
-
   const sellRadar = toPlayerRadarItems(sellMap, LEAGUE_RADAR.TOP_SELL_RADAR);
 
   const transferRadar: TransferRadarItem[] = Array.from(transferMap.entries())

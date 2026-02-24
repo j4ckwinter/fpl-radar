@@ -1,2 +1,2 @@
-export { predictTransfersForEntry, type PredictTransfersForEntryParams } from "./predict";
-export type { TransferPrediction } from "./types";
+export { predictTransfersForEntry } from "./predict";
+export type { PredictTransfersForEntryParams, TransferPrediction } from "./types";

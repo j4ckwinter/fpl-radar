@@ -1,3 +1,37 @@
+export interface LoadBuyContextParams {
+  leagueId: number;
+  entryId: number;
+  eventId: number;
+}
+
+export interface LoadBuyContextResult {
+  ownedPlayerIds: Set<number>;
+  teamCounts: Map<number, number>;
+}
+
+export interface BuyPoolPlayer {
+  id: number;
+  teamId: number;
+  positionId: number;
+  nowCost: number;
+  status: string;
+  news: string | null;
+  selectedByPercent: number | null;
+  webName: string;
+}
+
+export interface LoadBuyPoolParams {
+  ownedPlayerIds: Set<number>;
+  limit?: number;
+}
+
+export interface ScoreBuyCandidatesParams {
+  leagueId: number;
+  entryId: number;
+  eventId: number;
+  limit?: number;
+}
+
 export interface BuyCandidateScore {
   playerId: number;
   buyScore: number; // 0..100 integer

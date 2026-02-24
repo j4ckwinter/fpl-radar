@@ -1,25 +1,5 @@
-import type { SellCandidateScore } from "./types";
-
-const FLAGGED_STATUSES = ["i", "s", "u", "d"] as const;
-// TODO: Refine per FPL status meanings once verified.
-
-export interface ExtractSellFeaturesParams {
-  picks: Array<{
-    playerId: number;
-    pickPosition: number; // 1..15
-    isCaptain: boolean;
-    isViceCaptain: boolean;
-  }>;
-  playersById: Map<
-    number,
-    {
-      status: string;
-      news: string | null;
-      selectedByPercent: number | null;
-      nowCost: number;
-    }
-  >;
-}
+import { FLAGGED_STATUSES } from "./constants";
+import type { ExtractSellFeaturesParams, SellCandidateScore } from "./types";
 
 export function extractSellFeatures(
   params: ExtractSellFeaturesParams

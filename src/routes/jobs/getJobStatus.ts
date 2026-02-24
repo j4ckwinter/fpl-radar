@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { leagueRefreshQueue } from "../../jobs/queues";
+import { sendBadRequest, sendNotFound } from "../shared/replies";
 
 const paramsSchema = z.object({
   jobId: z.string().min(1),
@@ -20,9 +21,7 @@ export async function getJobStatusHandler(
 ): Promise<void> {
   const paramsResult = paramsSchema.safeParse(request.params);
   if (!paramsResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid jobId",
+    await sendBadRequest(reply, "Invalid jobId", {
       details: paramsResult.error.flatten(),
     });
     return;
@@ -31,10 +30,7 @@ export async function getJobStatusHandler(
 
   const job = await leagueRefreshQueue.getJob(jobId);
   if (!job) {
-    await reply.status(404).send({
-      error: "Not Found",
-      message: `Job ${jobId} not found`,
-    });
+    await sendNotFound(reply, `Job ${jobId} not found`);
     return;
   }
 
@@ -48,7 +44,11 @@ export async function getJobStatusHandler(
     jobId: job.id!,
     state,
     progress:
-      typeof progress === "object" && progress !== null ? progress : progress,
+      typeof progress === "object" && progress !== null
+        ? (progress as JobStatusResponse["progress"])
+        : typeof progress === "number"
+          ? progress
+          : null,
     result,
     error,
   };

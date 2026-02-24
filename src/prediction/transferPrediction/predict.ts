@@ -3,53 +3,8 @@ import { generateSingleTransferCandidates } from "../candidateGenerator";
 import { scoreSellCandidates } from "../sellScoring";
 import { scoreBuyCandidates } from "../buyScoring";
 import { TRANSFER_PREDICTION } from "./constants";
-import type { TransferPrediction } from "./types";
-
-const MAX_REASONS = 4;
-const SELL_REASONS_TAKE = 2;
-const BUY_REASONS_TAKE = 2;
-
-function clampScore(score: number): number {
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
-
-function buildReasons(
-  sellReasons: string[],
-  buyReasons: string[],
-  bankUnknown: boolean,
-  bigSpendPenalty: boolean
-): string[] {
-  const reasons: string[] = [];
-  for (let i = 0; i < SELL_REASONS_TAKE && i < sellReasons.length && reasons.length < MAX_REASONS; i++) {
-    reasons.push(sellReasons[i]);
-  }
-  for (let i = 0; i < BUY_REASONS_TAKE && i < buyReasons.length && reasons.length < MAX_REASONS; i++) {
-    reasons.push(buyReasons[i]);
-  }
-  if (bigSpendPenalty && reasons.length < MAX_REASONS) {
-    reasons.push("Requires significant budget");
-  }
-  if (bankUnknown && reasons.length < MAX_REASONS) {
-    reasons.push("Bank unknown (estimate)");
-  }
-  return reasons.slice(0, MAX_REASONS);
-}
-
-function softmaxProbabilities(scores: number[], temperature: number): number[] {
-  if (scores.length === 0) return [];
-  if (scores.length === 1) return [1];
-  const maxScore = Math.max(...scores);
-  const weights = scores.map((s) => Math.exp((s - maxScore) / temperature));
-  const sum = weights.reduce((a, b) => a + b, 0);
-  return weights.map((w) => w / sum);
-}
-
-export interface PredictTransfersForEntryParams {
-  leagueId: number;
-  entryId: number;
-  eventId: number;
-  maxResults?: number;
-}
+import { clampScore, buildReasons, softmaxProbabilities } from "./predict.utils";
+import type { PredictTransfersForEntryParams, TransferPrediction } from "./types";
 
 export async function predictTransfersForEntry(
   params: PredictTransfersForEntryParams

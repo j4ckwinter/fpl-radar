@@ -1,3 +1,10 @@
+export interface PredictTransfersForEntryParams {
+  leagueId: number;
+  entryId: number;
+  eventId: number;
+  maxResults?: number;
+}
+
 export interface TransferPrediction {
   outPlayerId: number;
   inPlayerId: number;

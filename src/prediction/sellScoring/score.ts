@@ -1,59 +1,13 @@
 import { prisma } from "../../lib/prisma";
 import { SquadNotFoundError } from "../errors";
-import { SELL_SCORE } from "./constants";
+import {
+  SELL_SCORE,
+  DEFAULT_TOP_N,
+  MAX_TOP_N,
+} from "./constants";
 import { extractSellFeatures } from "./features";
-import type { SellCandidateScore } from "./types";
-
-const DEFAULT_TOP_N = 15;
-const NEWS_SNIPPET_MAX_LENGTH = 80;
-
-function clampScore(score: number): number {
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
-
-function buildReasons(
-  features: SellCandidateScore["features"],
-  newsSnippet: string | null
-): string[] {
-  const reasons: string[] = [];
-  if (features.isFlagged) {
-    reasons.push("Flagged / availability concern");
-  }
-  if (features.status === "u") {
-    reasons.push("Unavailable");
-  }
-  if (features.isBenched) {
-    reasons.push("On the bench");
-  }
-  if (features.isCaptainOrVice) {
-    reasons.push("Captain/vice captain");
-  }
-  const templateHold =
-    !features.isFlagged &&
-    features.selectedByPercent !== null &&
-    features.selectedByPercent >= SELL_SCORE.TEMPLATE_THRESHOLD;
-  if (templateHold) {
-    reasons.push("High-ownership template hold");
-  }
-  if (features.hasNews && newsSnippet !== null) {
-    reasons.push(`News: ${newsSnippet}`);
-  }
-  return reasons;
-}
-
-function newsToSnippet(news: string | null): string | null {
-  if (news === null || news.trim().length === 0) return null;
-  const oneLine = news.replace(/\s+/g, " ").trim();
-  if (oneLine.length <= NEWS_SNIPPET_MAX_LENGTH) return oneLine;
-  return oneLine.slice(0, NEWS_SNIPPET_MAX_LENGTH) + "…";
-}
-
-export interface ScoreSellCandidatesParams {
-  leagueId: number;
-  entryId: number;
-  eventId: number;
-  topN?: number;
-}
+import { clampScore, buildReasons, newsToSnippet } from "./score.utils";
+import type { ScoreSellCandidatesParams, SellCandidateScore } from "./types";
 
 export async function scoreSellCandidates(
   params: ScoreSellCandidatesParams
@@ -140,7 +94,7 @@ export async function scoreSellCandidates(
 
   scores.sort((a, b) => b.sellScore - a.sellScore);
 
-  const topScores = scores.slice(0, Math.min(topN, 15));
+  const topScores = scores.slice(0, Math.min(topN, MAX_TOP_N));
 
   return { scores: topScores };
 }

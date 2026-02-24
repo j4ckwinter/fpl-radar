@@ -1,43 +1,16 @@
 import { loadBuyContext } from "./context";
 import { loadBuyPool } from "./pool";
-import { BUY_SCORE } from "./constants";
-import type { BuyCandidateScore } from "./types";
+import {
+  BUY_SCORE,
+  DEFAULT_RETURN_LIMIT,
+  HIGH_OWNERSHIP_PERCENT_THRESHOLD,
+  OWNERSHIP_PERCENT_FOR_MAX_BONUS,
+  BUY_REASON,
+} from "./constants";
+import { clampScore, isAvailable, isFlaggedOrUnavailable } from "./score.utils";
+import type { BuyCandidateScore, ScoreBuyCandidatesParams } from "./types";
 
-const DEFAULT_RETURN_LIMIT = 100;
-const UNAVAILABLE_STATUSES = ["u"] as const;
-const FLAGGED_STATUSES = ["i", "s", "d"] as const;
-// TODO: Refine status code meanings once verified.
-
-function clampScore(score: number): number {
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
-
-function isAvailable(status: string): boolean {
-  if (UNAVAILABLE_STATUSES.includes(status as (typeof UNAVAILABLE_STATUSES)[number])) {
-    return false;
-  }
-  if (FLAGGED_STATUSES.includes(status as (typeof FLAGGED_STATUSES)[number])) {
-    return false;
-  }
-  return true;
-}
-
-function isFlaggedOrUnavailable(status: string): boolean {
-  if (UNAVAILABLE_STATUSES.includes(status as (typeof UNAVAILABLE_STATUSES)[number])) {
-    return true;
-  }
-  if (FLAGGED_STATUSES.includes(status as (typeof FLAGGED_STATUSES)[number])) {
-    return true;
-  }
-  return false;
-}
-
-export interface ScoreBuyCandidatesParams {
-  leagueId: number;
-  entryId: number;
-  eventId: number;
-  limit?: number;
-}
+export type { ScoreBuyCandidatesParams } from "./types";
 
 export async function scoreBuyCandidates(
   params: ScoreBuyCandidatesParams
@@ -60,7 +33,8 @@ export async function scoreBuyCandidates(
     if (p.selectedByPercent !== null && p.selectedByPercent !== undefined) {
       const ownershipBonus = Math.min(
         BUY_SCORE.OWNERSHIP_BONUS_MAX,
-        p.selectedByPercent * (BUY_SCORE.OWNERSHIP_BONUS_MAX / 60)
+        p.selectedByPercent *
+          (BUY_SCORE.OWNERSHIP_BONUS_MAX / OWNERSHIP_PERCENT_FOR_MAX_BONUS)
       );
       score += ownershipBonus;
     }
@@ -79,20 +53,23 @@ export async function scoreBuyCandidates(
     }
 
     const reasons: string[] = [];
-    if (p.selectedByPercent !== null && p.selectedByPercent >= 20) {
-      reasons.push("High ownership / template target");
+    if (
+      p.selectedByPercent !== null &&
+      p.selectedByPercent >= HIGH_OWNERSHIP_PERCENT_THRESHOLD
+    ) {
+      reasons.push(BUY_REASON.HIGH_OWNERSHIP);
     }
     if (available) {
-      reasons.push("Available to play");
+      reasons.push(BUY_REASON.AVAILABLE);
     }
     if (flaggedOrUnavailable) {
-      reasons.push("Flagged / availability concern");
+      reasons.push(BUY_REASON.FLAGGED);
     }
     if (hasNews) {
-      reasons.push("News present");
+      reasons.push(BUY_REASON.NEWS);
     }
     if (p.nowCost >= BUY_SCORE.VERY_HIGH_PRICE_THRESHOLD) {
-      reasons.push("Very high price");
+      reasons.push(BUY_REASON.VERY_HIGH_PRICE);
     }
 
     scores.push({

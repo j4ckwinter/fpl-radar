@@ -1,16 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { SquadNotFoundError } from "../errors";
-
-export interface LoadBuyContextParams {
-  leagueId: number;
-  entryId: number;
-  eventId: number;
-}
-
-export interface LoadBuyContextResult {
-  ownedPlayerIds: Set<number>;
-  teamCounts: Map<number, number>;
-}
+import type { LoadBuyContextParams, LoadBuyContextResult } from "./types";
 
 /**
  * Loads owned player IDs and per-team counts for an entry's squad (snapshot + picks).

@@ -1,3 +1,38 @@
+export interface LeagueRadarLogger {
+  info(obj: object, msg?: string): void;
+  error(obj: object, msg?: string): void;
+}
+
+export interface GenerateLeagueRadarParams {
+  leagueId: number;
+  eventId: number;
+  maxEntries?: number;
+  concurrency?: number;
+  perEntryMaxResults?: number;
+  logger: LeagueRadarLogger;
+}
+
+/** Internal accumulator for aggregating probabilities per player or transfer. */
+export interface RadarAccumulator {
+  expectedCount: number;
+  entryIds: Set<number>;
+  examples: Array<{ entryId: number; probability: number }>;
+}
+
+/** Result of predicting transfers for one entry (ok with predictions or fail). */
+export type LeagueRadarEntryResult =
+  | {
+      status: "ok";
+      entryId: number;
+      predictions: Array<{
+        outPlayerId: number;
+        inPlayerId: number;
+        probability: number;
+        score: number;
+      }>;
+    }
+  | { status: "fail"; entryId: number; predictions: [] };
+
 export interface EntryPredictionSummary {
   entryId: number;
   predictions: Array<{

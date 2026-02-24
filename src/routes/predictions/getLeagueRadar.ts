@@ -2,18 +2,17 @@ import { z } from "zod";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma";
 import {
-  ensureGameweekStarted,
-  resolveStartedEventIdFromDb,
-} from "../../lib/gameweek";
-import {
   generateLeagueRadar,
   type LeagueRadarLogger,
 } from "../../prediction/leagueRadar/generate";
 import { LEAGUE_RADAR } from "../../prediction/leagueRadar/constants";
-
-const paramsSchema = z.object({
-  leagueId: z.coerce.number().int().positive(),
-});
+import { leagueIdParamSchema } from "../shared/schemas";
+import {
+  sendBadRequest,
+  sendNotFound,
+  sendBadRequestGameweek,
+} from "../shared/replies";
+import { resolveAndValidateEventId } from "../shared/eventId";
 
 const querySchema = z.object({
   eventId: z.coerce.number().int().positive().optional(),
@@ -21,12 +20,8 @@ const querySchema = z.object({
   concurrency: z.coerce.number().int().min(1).optional(),
 });
 
-export type GetLeagueRadarParams = z.infer<typeof paramsSchema>;
+export type GetLeagueRadarParams = z.infer<typeof leagueIdParamSchema>;
 export type GetLeagueRadarQuery = z.infer<typeof querySchema>;
-
-async function resolveEventIdFromDb(): Promise<number | null> {
-  return resolveStartedEventIdFromDb(prisma);
-}
 
 /**
  * GET /league/:leagueId/radar
@@ -39,11 +34,9 @@ export async function getLeagueRadarHandler(
   }>,
   reply: FastifyReply
 ): Promise<void> {
-  const paramsResult = paramsSchema.safeParse(request.params);
+  const paramsResult = leagueIdParamSchema.safeParse(request.params);
   if (!paramsResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid leagueId",
+    await sendBadRequest(reply, "Invalid leagueId", {
       details: paramsResult.error.flatten(),
     });
     return;
@@ -51,9 +44,7 @@ export async function getLeagueRadarHandler(
 
   const queryResult = querySchema.safeParse(request.query);
   if (!queryResult.success) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message: "Invalid query parameters",
+    await sendBadRequest(reply, "Invalid query parameters", {
       details: queryResult.error.flatten(),
     });
     return;
@@ -62,36 +53,27 @@ export async function getLeagueRadarHandler(
   const { leagueId } = paramsResult.data;
   const { eventId: eventIdQuery, maxEntries, concurrency } = queryResult.data;
 
-  const eventId =
-    eventIdQuery ?? (await resolveEventIdFromDb());
-  if (eventId === null) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      message:
-        "No gameweek available. Set eventId in query or run bootstrap ingestion.",
-    });
+  const eventIdResult = await resolveAndValidateEventId(prisma, eventIdQuery);
+  if ("error" in eventIdResult) {
+    if (eventIdResult.error.code !== undefined) {
+      await sendBadRequestGameweek(
+        reply,
+        eventIdResult.error.code,
+        eventIdResult.error.message
+      );
+    } else {
+      await sendBadRequest(reply, eventIdResult.error.message);
+    }
     return;
   }
-
-  const gameweekError = await ensureGameweekStarted(prisma, eventId);
-  if (gameweekError !== null) {
-    await reply.status(400).send({
-      error: "Bad Request",
-      code: gameweekError.code,
-      message: gameweekError.message,
-    });
-    return;
-  }
+  const { eventId } = eventIdResult;
 
   const league = await prisma.fplLeague.findUnique({
     where: { id: leagueId },
     select: { id: true },
   });
   if (!league) {
-    await reply.status(404).send({
-      error: "Not Found",
-      message: `League ${leagueId} not found`,
-    });
+    await sendNotFound(reply, `League ${leagueId} not found`);
     return;
   }
 
