@@ -39,6 +39,16 @@ function getEventIdOptional(): number | undefined {
   return n;
 }
 
+function getInPoolLimitOptional(): number | undefined {
+  const raw = process.env.FPL_IN_POOL_LIMIT;
+  if (raw === undefined || raw === "") return undefined;
+  const n = Number(raw);
+  if (Number.isNaN(n) || Math.floor(n) !== n || n < 1) {
+    throw new Error(`FPL_IN_POOL_LIMIT must be a positive integer; got: ${raw}`);
+  }
+  return n;
+}
+
 /**
  * Resolves eventId from DB: isNext → isCurrent → latest by id.
  */
@@ -70,15 +80,32 @@ async function main() {
   const entryId = getEntryId();
   const eventIdEnv = getEventIdOptional();
   const eventId = eventIdEnv ?? (await resolveEventIdFromDb());
+  const perPositionInPoolLimit = getInPoolLimitOptional();
 
   const squad = await loadSquadState({ leagueId, entryId, eventId });
-  const { candidates, stats } = await generateSingleTransferCandidates({ squad });
+  const { candidates, stats } = await generateSingleTransferCandidates({
+    squad,
+    perPositionInPoolLimit,
+  });
 
   console.log("Candidates generated");
   console.log("  entryId:", squad.entryId);
   console.log("  eventId:", squad.eventId);
   console.log("  bank:", squad.bank);
   console.log("  candidates:", stats.generated);
+  console.log("  truncated:", stats.truncated);
+  console.log("  inPoolPerPositionLimit:", stats.inPoolPerPositionLimit);
+
+  const before = stats.inPoolSizeByPositionBeforeLimit ?? {};
+  const after = stats.inPoolSizeByPosition ?? {};
+  const positionIds = [...new Set([...Object.keys(before), ...Object.keys(after)])].map(Number).sort((a, b) => a - b);
+  if (positionIds.length > 0) {
+    console.log("  per-position pool (before -> after limit):");
+    for (const posId of positionIds) {
+      console.log(`    position ${posId}: ${before[posId] ?? 0} -> ${after[posId] ?? 0}`);
+    }
+  }
+
   console.log("  stats:", stats);
 
   const show = candidates.slice(0, 10);

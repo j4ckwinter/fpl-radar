@@ -1,0 +1,70 @@
+You are working in the repo `fpl-radar`.
+
+Implement **Issue #13: Score likely sell candidates in rival squads**.
+
+This step takes a rival’s current squad snapshot and produces a ranked list of “likely sells” with explainable reasons. Do NOT score buys yet (Issue #14) and do NOT compute OUT→IN probabilities yet (Issue #15).
+
+Assume Issues #8–#12 exist:
+- Reference data in DB (players/teams/positions/gameweeks)
+- League entries exist
+- Entry snapshots + picks exist for a target eventId
+- Candidate generation exists (Issue #12), but this sell scoring must work even without generating IN candidates.
+
+---
+
+## Goal
+Given:
+- `leagueId`
+- `entryId`
+- `eventId`
+
+Return a list of the entry’s owned players scored by “sell likelihood”.
+
+Output:
+- sorted list of owned players with:
+  - `playerId`
+  - `sellScore` (0..100 integer)
+  - `reasons[]` (human readable strings)
+  - `features` (numeric/boolean feature values for debugging)
+
+The scoring must be:
+- deterministic
+- explainable
+- easy to tune later (weights centralised)
+
+---
+
+## Inputs you can use (DB-only for this issue)
+Use only what is already persisted in DB:
+- From `FplPlayer`: `status`, `news`, `selectedByPercent`, `nowCost`, `teamId`, `positionId`, `webName` (if stored)
+- From snapshot/picks: bench vs starting XI, captain/vice captain flags
+- From gameweeks: resolve current/next if needed for scripts
+
+Do NOT add new FPL API calls or new ingestion endpoints in this step.
+
+---
+
+## Deliverables
+
+### A) Types
+Create:
+- `src/prediction/sellScoring/types.ts`
+
+Define:
+```ts
+export interface SellCandidateScore {
+  playerId: number;
+  sellScore: number; // 0..100 integer
+  reasons: string[];
+  features: {
+    isFlagged: boolean;
+    status: string;
+    hasNews: boolean;
+    selectedByPercent: number | null;
+    isBenched: boolean;
+    isCaptainOrVice: boolean;
+    nowCost: number;
+  };
+}
+```
+

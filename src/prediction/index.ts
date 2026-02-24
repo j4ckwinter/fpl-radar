@@ -1,4 +1,8 @@
 export {
+  DEFAULT_MAX_CANDIDATES,
+  DEFAULT_IN_POOL_PER_POSITION,
+} from "./constants";
+export {
   getSquadState,
   generateTransferCandidates,
   type CandidateDiagnostics,
@@ -8,6 +12,12 @@ export {
   type GenerateSingleTransferCandidatesParams,
   type GenerateSingleTransferCandidatesResult,
 } from "./candidateGenerator";
+export {
+  buildInPoolByPosition,
+  type BuildInPoolByPositionParams,
+  type BuildInPoolByPositionResult,
+  type InPoolPlayer,
+} from "./inPoolBuilder";
 export { loadSquadState } from "./squadLoader";
 export { SquadNotFoundError, InvalidSquadError } from "./errors";
 export type { SquadState, TransferCandidate } from "./types";
