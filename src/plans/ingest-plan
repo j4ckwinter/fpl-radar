@@ -1,0 +1,60 @@
+You are working in the repo `fpl-radar`.
+
+Implement Issue #9: Ingest classic Fantasy Premier League league standings by league ID and persist them to Postgres.
+
+This builds on:
+- The existing `FplClient.getLeagueStandings(...)`
+- Prisma models created in Issue #8
+- The ingestion pattern established for bootstrap-static
+
+## Goal
+Create an ingestion pipeline that:
+- Fetches all entries in a classic league (handles pagination)
+- Persists league metadata and league entries
+- Is idempotent and safe to re-run
+- Can be executed via a script and later reused by a worker job
+
+This step should NOT fetch picks or transfers yet — standings only.
+
+---
+
+## Domain Concepts (important)
+- A **League** represents a mini-league (classic league).
+- A **LeagueEntry** represents a manager/team within that league.
+- Standings change over time, but entry identity is stable (entry ID).
+- We only care about the *current* standings for now (no historical snapshots yet).
+
+---
+
+## Deliverables
+
+### A) Prisma schema changes
+
+Extend `prisma/schema.prisma` with:
+
+#### 1) `FplLeague`
+- `id` Int @id (league ID from FPL)
+- `name` String
+- `createdAt` DateTime @default(now())
+- `updatedAt` DateTime @updatedAt
+
+#### 2) `FplLeagueEntry`
+- `id` Int @id (entry ID from FPL)
+- `leagueId` Int (FK → FplLeague)
+- `entryName` String
+- `playerName` String
+- `rank` Int
+- `lastRank` Int?
+- `totalPoints` Int
+- `updatedAt` DateTime @updatedAt
+
+Indexes:
+- index on `leagueId`
+- optional composite index on `(leagueId, rank)`
+
+Relations:
+- FplLeague 1 → many FplLeagueEntry
+
+After updating the schema, run:
+```bash
+pnpm exec prisma migrate dev --name fpl_league_standings
