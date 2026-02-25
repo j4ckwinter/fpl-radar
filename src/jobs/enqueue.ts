@@ -19,7 +19,7 @@ export async function enqueueLeagueRefresh(
   payload: LeagueRefreshJobPayload
 ): Promise<{ jobId: string }> {
   const jobOptions = {
-    removeOnComplete: true,
+    removeOnComplete: { count: 100 },
     removeOnFail: false,
   };
 
