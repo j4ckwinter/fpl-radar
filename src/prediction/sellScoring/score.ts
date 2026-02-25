@@ -6,7 +6,14 @@ import { loadMomentumP95 } from "../momentum/p95";
 import { normaliseMomentum } from "../momentum/normalise";
 import { parseRiskProfile } from "../riskProfile";
 import { normaliseFixtureScore } from "../buyScoring/score.utils";
-import { DEFAULT_TOP_N, MAX_TOP_N, SELL_REASON } from "./constants";
+import {
+  DEFAULT_TOP_N,
+  MAX_TOP_N,
+  SELL_REASON,
+  SELL_PROFILE_REASONS_MAX,
+  SELL_OWNERSHIP_REASONS_MAX,
+} from "./constants";
+import { isHighOwnership } from "../ownershipProfile/thresholds";
 import { computeSellRawScore } from "./scoreLogic";
 import { extractSellFeatures } from "./features";
 import { clampScore, buildReasons, newsToSnippet } from "./score.utils";
@@ -109,6 +116,9 @@ export async function scoreSellCandidates(
     const fixtureBad01 = 1 - fixtureGood01;
     const leagueOwnershipPct =
       leagueOwnership.ownershipByPlayerId.get(playerId) ?? null;
+    const countOwned =
+      leagueOwnership.ownershipCountByPlayerId.get(playerId) ?? 0;
+    const totalEntries = leagueOwnership.totalEntries;
 
     const raw = computeSellRawScore({
       momentumOut,
@@ -122,12 +132,39 @@ export async function scoreSellCandidates(
     const reasons: string[] = [];
     if (momentumOut > 0.5) reasons.push(SELL_REASON.HIGH_MOMENTUM);
     if (fixtureBad01 > 0.5) reasons.push(SELL_REASON.BAD_FIXTURES);
+
+    const highOwnership = isHighOwnership(
+      leagueOwnershipPct,
+      countOwned,
+      totalEntries
+    );
+    let profileReasons = 0;
+    let ownershipReasons = 0;
     if (
       riskProfile === "safe" &&
-      leagueOwnershipPct !== null &&
-      leagueOwnershipPct >= 0.6
+      highOwnership &&
+      ownershipReasons < SELL_OWNERSHIP_REASONS_MAX
     ) {
       reasons.push(SELL_REASON.LEAGUE_WIDELY_OWNED);
+      ownershipReasons++;
+    }
+    if (
+      riskProfile === "safe" &&
+      highOwnership &&
+      profileReasons < SELL_PROFILE_REASONS_MAX
+    ) {
+      reasons.push(SELL_REASON.SAFE_AVOID_RISKY_SELL_TEMPLATE);
+      profileReasons++;
+    }
+    if (
+      riskProfile === "balanced" &&
+      leagueOwnershipPct !== null &&
+      leagueOwnershipPct >= 0.3 &&
+      leagueOwnershipPct <= 0.7 &&
+      profileReasons < SELL_PROFILE_REASONS_MAX
+    ) {
+      reasons.push(SELL_REASON.BALANCED_LEAGUE_CONSIDERATION);
+      profileReasons++;
     }
     reasons.push(...buildReasons(features, newsByPlayerId.get(playerId) ?? null));
 

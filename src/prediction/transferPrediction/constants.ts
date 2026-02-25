@@ -1,23 +1,6 @@
 /** Buy pool size for prediction: ensure enough per-position coverage (top N by transfers in). */
 export const PREDICTION_BUY_POOL_LIMIT = 2000;
 
-/** League ownership threshold (0..1) above which "safe" profile penalises selling that player. */
-export const SAFE_PROFILE_HIGH_OWNERSHIP_THRESHOLD = 0.6;
-
-/** Penalty applied to transfer score when safe profile and OUT player is widely owned in league. */
-export const SAFE_PROFILE_HIGH_OWNERSHIP_PENALTY = 20;
-
-/**
- * Momentum out (0..1) above which selling is treated as "widely copied" in safe mode.
- * We do not apply the high-ownership sell penalty when OUT player has high transfers out.
- */
-export const SAFE_PROFILE_CONSENSUS_SELL_MOMENTUM_THRESHOLD = 0.5;
-
-/**
- * Fixture difficulty (0..1, high = difficult) above which we waive high-ownership sell penalty.
- */
-export const SAFE_PROFILE_DIFFICULT_FIXTURES_THRESHOLD = 0.5;
-
 /** Penalise transfers where min(sellScore, buyScore) is below this (weak-link penalty). */
 export const WEAK_LINK_THRESHOLD = 25;
 

@@ -10,6 +10,8 @@ export interface LeagueOwnershipResult {
   totalEntries: number;
   /** Player ID → ownership fraction in [0, 1]. */
   ownershipByPlayerId: Map<number, number>;
+  /** Player ID → number of league entries that own this player. */
+  ownershipCountByPlayerId: Map<number, number>;
 }
 
 /** Serializable shape for cache (Map → record). */
@@ -18,6 +20,7 @@ interface CachedLeagueOwnership {
   eventId: number;
   totalEntries: number;
   ownershipByPlayerId: Record<string, number>;
+  ownershipCountByPlayerId: Record<string, number>;
 }
 
 function toCached(result: LeagueOwnershipResult): CachedLeagueOwnership {
@@ -26,6 +29,7 @@ function toCached(result: LeagueOwnershipResult): CachedLeagueOwnership {
     eventId: result.eventId,
     totalEntries: result.totalEntries,
     ownershipByPlayerId: Object.fromEntries(result.ownershipByPlayerId),
+    ownershipCountByPlayerId: Object.fromEntries(result.ownershipCountByPlayerId),
   };
 }
 
@@ -34,11 +38,27 @@ function fromCached(cached: CachedLeagueOwnership): LeagueOwnershipResult {
   for (const [k, v] of Object.entries(cached.ownershipByPlayerId)) {
     ownershipByPlayerId.set(Number(k), v);
   }
+  const totalEntries = cached.totalEntries;
+  let ownershipCountByPlayerId: Map<number, number>;
+  if (cached.ownershipCountByPlayerId && Object.keys(cached.ownershipCountByPlayerId).length > 0) {
+    ownershipCountByPlayerId = new Map();
+    for (const [k, v] of Object.entries(cached.ownershipCountByPlayerId)) {
+      ownershipCountByPlayerId.set(Number(k), v);
+    }
+  } else {
+    ownershipCountByPlayerId = new Map();
+    if (totalEntries > 0) {
+      for (const [playerId, frac] of ownershipByPlayerId) {
+        ownershipCountByPlayerId.set(playerId, Math.round(frac * totalEntries));
+      }
+    }
+  }
   return {
     leagueId: cached.leagueId,
     eventId: cached.eventId,
-    totalEntries: cached.totalEntries,
+    totalEntries,
     ownershipByPlayerId,
+    ownershipCountByPlayerId,
   };
 }
 
@@ -86,6 +106,7 @@ export async function computeLeagueOwnership(params: {
     eventId,
     totalEntries,
     ownershipByPlayerId,
+    ownershipCountByPlayerId: countByPlayerId,
   };
 }
 

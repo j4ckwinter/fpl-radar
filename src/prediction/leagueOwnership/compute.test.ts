@@ -35,6 +35,7 @@ describe("computeLeagueOwnership", () => {
     expect(result.eventId).toBe(5);
     expect(result.totalEntries).toBe(10);
     expect(result.ownershipByPlayerId.get(playerId)).toBe(0.6);
+    expect(result.ownershipCountByPlayerId.get(playerId)).toBe(6);
   });
 
   it("ignores entries without snapshots (only counts loaded snapshots)", async () => {
@@ -60,6 +61,7 @@ describe("computeLeagueOwnership", () => {
 
     expect(result.totalEntries).toBe(0);
     expect(result.ownershipByPlayerId.size).toBe(0);
+    expect(result.ownershipCountByPlayerId.size).toBe(0);
   });
 
   it("calls findMany with leagueId and eventId", async () => {

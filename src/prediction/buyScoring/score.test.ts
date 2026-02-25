@@ -15,6 +15,7 @@ vi.mock("../leagueOwnership/compute", () => ({
     eventId: 5,
     totalEntries: 10,
     ownershipByPlayerId: new Map(),
+    ownershipCountByPlayerId: new Map(),
   }),
 }));
 vi.mock("../momentum/p95", () => ({
@@ -117,6 +118,10 @@ describe("scoreBuyCandidates", () => {
       ownershipByPlayerId: new Map([
         [1, 0.2],
         [2, 0.8],
+      ]),
+      ownershipCountByPlayerId: new Map([
+        [1, 2],
+        [2, 8],
       ]),
     });
 
@@ -250,6 +255,7 @@ describe("scoreBuyCandidates", () => {
       eventId: 5,
       totalEntries: 12,
       ownershipByPlayerId: new Map([[1, 8 / 12]]),
+      ownershipCountByPlayerId: new Map([[1, 8]]),
     });
 
     const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
@@ -273,6 +279,10 @@ describe("scoreBuyCandidates", () => {
         [1, 0.8],
         [2, 0.1],
       ]),
+      ownershipCountByPlayerId: new Map([
+        [1, 8],
+        [2, 1],
+      ]),
     });
 
     const result = await scoreBuyCandidates({
@@ -285,7 +295,7 @@ describe("scoreBuyCandidates", () => {
     const highOwn = result.scores.find((s) => s.playerId === 1);
     const lowOwn = result.scores.find((s) => s.playerId === 2);
     expect(lowOwn!.buyScore).toBeGreaterThan(highOwn!.buyScore);
-    expect(lowOwn!.reasons).toContain("Strong differential in your league");
+    expect(lowOwn!.reasons).toContain("Differential upside");
   });
 
   it("balanced riskProfile: higher league ownership gives higher buy score", async () => {
@@ -300,6 +310,10 @@ describe("scoreBuyCandidates", () => {
       ownershipByPlayerId: new Map([
         [1, 0.8],
         [2, 0.2],
+      ]),
+      ownershipCountByPlayerId: new Map([
+        [1, 8],
+        [2, 2],
       ]),
     });
 
@@ -321,6 +335,7 @@ describe("scoreBuyCandidates", () => {
       eventId: 5,
       totalEntries: 0,
       ownershipByPlayerId: new Map(),
+      ownershipCountByPlayerId: new Map(),
     });
 
     const result = await scoreBuyCandidates({ leagueId, entryId, eventId });

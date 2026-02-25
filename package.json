@@ -21,6 +21,7 @@
     "predict:buys": "tsx src/scripts/score-buys.ts",
     "predict:transfers": "tsx src/scripts/predict-transfers.ts",
     "predict:league-radar": "tsx src/scripts/league-radar.ts",
+    "predict:compare-profiles": "tsx src/scripts/compare-risk-profiles.ts",
     "validate:ranking": "pnpm test -- src/prediction/transferPrediction src/routes/predictions/getEntryPredictions.test.ts --run && echo '\n--- Ranking v1.3 validation checklist ---\n• Diversity: list is score-desc (greedy + re-sort).\n• Safe mode: no momentum double-count; fixture-driven buys competitive.\n• NO_TRANSFER: appears when top score < threshold.\n• Top transfers: credible INs (weak-link penalty).\n• High-owned sells: allowed when fixtures/momentum/flags indicate.\n• Probabilities: sum to 1 on final list.\n'",
     "postinstall": "prisma generate"
   },

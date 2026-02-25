@@ -6,18 +6,13 @@ import {
   DIVERSITY,
   TRANSFER_PREDICTION,
   PREDICTION_BUY_POOL_LIMIT,
-  SAFE_PROFILE_HIGH_OWNERSHIP_PENALTY,
-  SAFE_PROFILE_HIGH_OWNERSHIP_THRESHOLD,
-  SAFE_PROFILE_CONSENSUS_SELL_MOMENTUM_THRESHOLD,
   NO_TRANSFER_REASONS,
   NO_TRANSFER_SCORE_THRESHOLD,
   WEAK_LINK_PENALTY,
   WEAK_LINK_THRESHOLD,
-  SAFE_PROFILE_DIFFICULT_FIXTURES_THRESHOLD,
   SCORE_MAX,
 } from "./constants";
 import { diversifyPredictions } from "./diversify";
-import { normaliseFixtureScore } from "../buyScoring/score.utils";
 import { clampScore, buildReasons, softmaxProbabilities } from "./predict.utils";
 import type {
   PredictTransfersForEntryParams,
@@ -105,34 +100,6 @@ export async function predictTransfersForEntry(
       const weakLink = Math.min(sellScore, buyScore);
       if (weakLink < WEAK_LINK_THRESHOLD) {
         rawScore -= WEAK_LINK_PENALTY;
-      }
-
-      if (riskProfile === "safe") {
-        const outFeatures = sellByPlayerId.get(c.outPlayerId)?.features;
-        const outLeagueOwnership = outFeatures?.leagueOwnershipPct ?? null;
-        const outMomentum = outFeatures?.momentumOut ?? 0;
-        const isWidelyCopiedSell =
-          outMomentum >= SAFE_PROFILE_CONSENSUS_SELL_MOMENTUM_THRESHOLD;
-        const fixtureGood01 = normaliseFixtureScore(
-          outFeatures?.upcomingFixtureScore ?? null
-        );
-        const fixtureBad01 = 1 - fixtureGood01;
-        const difficultFixtures =
-          fixtureBad01 >= SAFE_PROFILE_DIFFICULT_FIXTURES_THRESHOLD;
-        const isFlagged = outFeatures?.isFlagged ?? false;
-        const isUnavailable = outFeatures?.status === "u";
-        const strongSellSignal =
-          isWidelyCopiedSell ||
-          difficultFixtures ||
-          isFlagged ||
-          isUnavailable;
-        if (
-          outLeagueOwnership !== null &&
-          outLeagueOwnership >= SAFE_PROFILE_HIGH_OWNERSHIP_THRESHOLD &&
-          !strongSellSignal
-        ) {
-          rawScore -= SAFE_PROFILE_HIGH_OWNERSHIP_PENALTY;
-        }
       }
 
       const sellReasons = sellByPlayerId.get(c.outPlayerId)?.reasons ?? [];

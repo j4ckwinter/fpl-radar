@@ -15,6 +15,7 @@ vi.mock("../leagueOwnership/compute", () => ({
     eventId: 5,
     totalEntries: 10,
     ownershipByPlayerId: new Map(),
+    ownershipCountByPlayerId: new Map(),
   }),
 }));
 vi.mock("../momentum/p95", () => ({
@@ -111,6 +112,7 @@ describe("scoreSellCandidates", () => {
       eventId: 5,
       totalEntries: 10,
       ownershipByPlayerId: new Map(),
+      ownershipCountByPlayerId: new Map(),
     });
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshotWithPicks([pick(1), pick(2)]) as never
@@ -272,6 +274,7 @@ describe("scoreSellCandidates", () => {
       eventId: 5,
       totalEntries: 10,
       ownershipByPlayerId: new Map([[1, 0.8]]),
+      ownershipCountByPlayerId: new Map([[1, 8]]),
     });
     vi.mocked(extractSellFeatures).mockReturnValue(
       new Map([[1, features({ transfersOutEvent: 50 })]])

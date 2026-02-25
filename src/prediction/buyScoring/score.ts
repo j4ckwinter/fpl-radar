@@ -5,7 +5,21 @@ import { normaliseMomentum } from "../momentum/normalise";
 import { parseRiskProfile } from "../riskProfile";
 import { loadBuyContext } from "./context";
 import { loadBuyPool } from "./pool";
-import { BUY_REASON, BUY_SCORE, DEFAULT_RETURN_LIMIT } from "./constants";
+import {
+  BUY_REASON,
+  BUY_SCORE,
+  DEFAULT_RETURN_LIMIT,
+  BUY_PROFILE_REASONS_MAX,
+  BUY_OWNERSHIP_REASONS_MAX,
+} from "./constants";
+import {
+  isHighOwnership,
+  isLowOwnership,
+} from "../ownershipProfile/thresholds";
+import {
+  RISKY_CONVICTION_MOMENTUM_THRESHOLD,
+  RISKY_CONVICTION_FIXTURE_THRESHOLD,
+} from "../ownershipProfile/constants";
 import { computeBuyRawScore } from "./scoreLogic";
 import {
   clampScore,
@@ -41,10 +55,13 @@ export async function scoreBuyCandidates(
 
   const scores: BuyCandidateScore[] = [];
 
+  const totalEntries = leagueOwnership.totalEntries;
+
   for (const p of pool) {
     const upcomingFixtureScore = teamUpcomingScores.get(p.teamId) ?? null;
     const leagueOwnershipPct =
       leagueOwnership.ownershipByPlayerId.get(p.id) ?? null;
+    const countOwned = leagueOwnership.ownershipCountByPlayerId.get(p.id) ?? 0;
     const hasNews = p.news !== null && p.news.trim().length > 0;
     const available = isAvailable(p.status);
     const flaggedOrUnavailable = isFlaggedOrUnavailable(p.status);
@@ -64,14 +81,56 @@ export async function scoreBuyCandidates(
       available,
     });
 
+    const highOwnership = isHighOwnership(
+      leagueOwnershipPct,
+      countOwned,
+      totalEntries
+    );
+    const lowOwnership = isLowOwnership(
+      leagueOwnershipPct,
+      countOwned,
+      totalEntries
+    );
+    const riskyConvictionOk =
+      momentumIn >= RISKY_CONVICTION_MOMENTUM_THRESHOLD ||
+      fixture01 >= RISKY_CONVICTION_FIXTURE_THRESHOLD;
+
     const reasons: string[] = [];
     if (momentumIn > 0.7) reasons.push(BUY_REASON.HIGH_MOMENTUM);
     if (fixture01 > 0.7) reasons.push(BUY_REASON.FAVOURABLE_FIXTURES);
-    if (riskProfile === "safe" && leagueOwnershipPct !== null && leagueOwnershipPct >= 0.6) {
+
+    let profileReasons = 0;
+    let ownershipReasons = 0;
+    if (riskProfile === "safe" && highOwnership && ownershipReasons < BUY_OWNERSHIP_REASONS_MAX) {
       reasons.push(BUY_REASON.LEAGUE_HIGH_OWNERSHIP);
+      ownershipReasons++;
     }
-    if (riskProfile === "risky" && leagueOwnershipPct !== null && leagueOwnershipPct < 0.2) {
-      reasons.push(BUY_REASON.LEAGUE_DIFFERENTIAL);
+    if (riskProfile === "safe" && highOwnership && profileReasons < BUY_PROFILE_REASONS_MAX) {
+      reasons.push(BUY_REASON.SAFE_COVERING_POPULAR);
+      profileReasons++;
+    }
+    if (
+      riskProfile === "balanced" &&
+      leagueOwnershipPct !== null &&
+      leagueOwnershipPct >= 0.3 &&
+      leagueOwnershipPct <= 0.7 &&
+      profileReasons < BUY_PROFILE_REASONS_MAX
+    ) {
+      reasons.push(BUY_REASON.BALANCED_LEAGUE_CONSIDERATION);
+      profileReasons++;
+    }
+    if (riskProfile === "risky" && lowOwnership && profileReasons < BUY_PROFILE_REASONS_MAX) {
+      reasons.push(BUY_REASON.RISKY_DIFFERENTIAL_UPSIDE);
+      profileReasons++;
+    }
+    if (
+      riskProfile === "risky" &&
+      lowOwnership &&
+      riskyConvictionOk &&
+      profileReasons < BUY_PROFILE_REASONS_MAX
+    ) {
+      reasons.push(BUY_REASON.RISKY_LOW_OWNERSHIP_HIGH_CONVICTION);
+      profileReasons++;
     }
     if (available) reasons.push(BUY_REASON.AVAILABLE);
     if (flaggedOrUnavailable) reasons.push(BUY_REASON.FLAGGED);

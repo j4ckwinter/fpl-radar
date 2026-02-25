@@ -34,4 +34,14 @@ export const SELL_REASON = {
   UNAVAILABLE: "Unavailable",
   CAPTAIN_OR_VICE: "Captain/vice captain",
   TEMPLATE_HOLD: "High-ownership template hold",
+  /** Safe profile: discourage selling template without strong reason. */
+  SAFE_AVOID_RISKY_SELL_TEMPLATE: "Avoiding a risky sell of a template player",
+  /** Balanced: ownership meaningfully influenced score. */
+  BALANCED_LEAGUE_CONSIDERATION: "Moderate league consideration",
 } as const;
+
+/** Max profile-specific reasons to add per prediction. */
+export const SELL_PROFILE_REASONS_MAX = 2;
+
+/** Max ownership-based reasons to add per prediction. */
+export const SELL_OWNERSHIP_REASONS_MAX = 1;

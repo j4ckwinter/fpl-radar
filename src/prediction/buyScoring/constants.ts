@@ -28,7 +28,21 @@ export const BUY_REASON = {
   NEWS: "News present",
   VERY_HIGH_PRICE: "Very high price",
   LEAGUE_MAJORITY_OWN: "Majority of rivals already own this player",
+  /** Safe: covering a popular league pick. */
+  SAFE_COVERING_POPULAR: "Covering a popular league pick",
+  /** Balanced: ownership meaningfully influenced score. */
+  BALANCED_LEAGUE_CONSIDERATION: "Moderate league consideration",
+  /** Risky: differential upside. */
+  RISKY_DIFFERENTIAL_UPSIDE: "Differential upside",
+  /** Risky: low ownership with strong momentum/fixtures. */
+  RISKY_LOW_OWNERSHIP_HIGH_CONVICTION: "Low ownership, high conviction",
 } as const;
+
+/** Max profile-specific reasons to add per prediction. */
+export const BUY_PROFILE_REASONS_MAX = 2;
+
+/** Max ownership-based reasons to add per prediction. */
+export const BUY_OWNERSHIP_REASONS_MAX = 1;
 
 /** Fixture score range from teamUpcomingScores (easier = higher). */
 export const FIXTURE_SCORE_MIN = -10;

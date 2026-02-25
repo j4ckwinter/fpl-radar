@@ -1,4 +1,5 @@
 import { SELL_SCORE } from "./constants";
+import { mapOwnershipForSell } from "../ownershipProfile/curves";
 
 export type RiskProfile = "safe" | "balanced" | "risky";
 
@@ -12,14 +13,15 @@ export interface SellScoreFeatures {
   isUnavailable: boolean;
 }
 
+/**
+ * League penalty for sell (0..1) using profile-shaped curve.
+ * Safe: strong penalty for high ownership; risky: small but visible.
+ */
 export function leaguePenaltyForSell(
   leagueOwnershipPct: number | null,
   riskProfile: RiskProfile
 ): number {
-  const L = leagueOwnershipPct ?? 0;
-  if (riskProfile === "safe") return L;
-  if (riskProfile === "risky") return 0.1 * L;
-  return 0.5 * L;
+  return mapOwnershipForSell(leagueOwnershipPct, riskProfile);
 }
 
 /**
