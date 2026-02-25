@@ -1,0 +1,82 @@
+You are working in the repo `fpl-radar`.
+
+Implement **Engine v1.1 – Step 1: Keep bench status in data but remove it from ranking**.
+
+## Context
+Right now, the SELL scoring ranks players partly based on whether they are benched (`pickPosition > 11`). This is noisy because a player may be benched for reasons like a difficult fixture or rotation, so we want to:
+- keep `isBenched` in the returned features (for debugging / future use),
+- but **stop using it to affect sellScore** (and any pre-ranking).
+
+This task should be a small, safe change.
+
+---
+
+## Scope
+- Update SELL scoring only (Issue #13 implementation).
+- Do NOT change candidate generation legality (Issue #12).
+- Do NOT change BUY scoring (Issue #14).
+- Do NOT add any new endpoints or DB schema.
+
+---
+
+## Deliverables
+
+### A) Remove bench weighting from sell scoring
+Find the SELL scoring constants and logic:
+- `src/prediction/sellScoring/constants.ts`
+- `src/prediction/sellScoring/score.ts`
+
+Make these changes:
+1) Remove (or set to 0) the bench-related weight:
+   - `SELL_SCORE.BENCHED`
+2) Remove the condition that adds bench weight to `sellScore`:
+   - do not add points when `isBenched === true`
+
+### B) Keep bench info in features
+Do NOT remove `isBenched` from:
+- `SellCandidateScore.features`
+- `extractSellFeatures(...)`
+
+We still want it visible in output.
+
+### C) Update reasons
+In `score.ts`, ensure bench-related reasons are not added.
+Remove:
+- "On the bench" reason (or any bench-derived reason strings)
+
+### D) Update any tests
+If you have unit tests for sell scoring:
+- update expectations so bench status no longer changes score
+- bench should still appear in features output
+
+If there are no tests yet:
+- add a minimal vitest test file:
+  - `src/prediction/sellScoring/score.test.ts`
+  - test that:
+    - a benched player and a starting player with identical other features produce the same `sellScore`
+    - both include correct `isBenched` feature
+
+Keep the test small and deterministic. You can mock the player fields and bypass DB by testing a pure helper if one exists. If `scoreSellCandidates` is DB-bound, create a small pure scoring function like:
+```ts
+export function computeSellScoreFromFeatures(features: SellCandidateScore["features"]): { score: number; reasons: string[] }
+```
+
+Acceptance Criteria
+
+- sellScore no longer changes based on bench status
+
+- isBenched still appears in features
+
+- No bench-related reason appears in output
+
+- Tests (if added/updated) pass
+
+Implementation Order
+
+- Update constants + scoring logic
+
+- Update reasons
+
+- Add/update unit tests
+
+- Run tests and ensure no other scoring changed

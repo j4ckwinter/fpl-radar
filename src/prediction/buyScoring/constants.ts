@@ -7,6 +7,8 @@ export const BUY_SCORE = {
   PRICE_VERY_HIGH_PENALTY: 10, // mild penalty to avoid always picking premiums in v1
   VERY_HIGH_PRICE_THRESHOLD: 120, // £12.0m (tenths)
   TOP_POOL_LIMIT: 500, // max candidates to return for later pairing
+  /** Bonus for league ownership (non-ownership risk); applied when leagueOwnershipPct !== null. */
+  LEAGUE_OWNERSHIP_RISK_WEIGHT: 20,
 } as const;
 
 /** Default number of buy candidates to return from scoreBuyCandidates. */
@@ -31,4 +33,6 @@ export const BUY_REASON = {
   FLAGGED: "Flagged / availability concern",
   NEWS: "News present",
   VERY_HIGH_PRICE: "Very high price",
+  LEAGUE_HIGH_OWNERSHIP: "Highly owned in your league",
+  LEAGUE_MAJORITY_OWN: "Majority of rivals already own this player",
 } as const;

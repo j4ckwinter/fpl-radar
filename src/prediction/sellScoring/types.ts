@@ -19,8 +19,10 @@ export interface ExtractSellFeaturesParams {
       news: string | null;
       selectedByPercent: number | null;
       nowCost: number;
+      teamId: number;
     }
   >;
+  teamUpcomingScores?: Map<number, number>;
 }
 
 export interface SellCandidateScore {
@@ -35,5 +37,6 @@ export interface SellCandidateScore {
     isBenched: boolean;
     isCaptainOrVice: boolean;
     nowCost: number;
+    upcomingFixtureScore: number | null;
   };
 }

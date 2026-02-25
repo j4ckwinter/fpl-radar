@@ -1,0 +1,222 @@
+You are working in the repo `fpl-radar`.
+
+Implement **Engine v1.1 – Step 3: League-specific ownership & “risk of not owning” signal**.
+
+## Context
+Global ownership (`selectedByPercent`) is useful, but for *mini-league decisions* it’s often the wrong signal.
+
+What actually matters is:
+> “How many of **my rivals** already own this player?”
+
+If a player is widely owned **inside the league**, not owning them carries downside risk:
+- rank damage if they haul
+- defensive buying behaviour (“blocking”)
+
+This step introduces:
+1) league-level ownership calculation
+2) a derived **non-ownership risk** signal
+3) integration into BUY scoring (and optionally output metadata)
+
+---
+
+## Scope
+- Compute league-specific ownership % for players
+- Use snapshots already ingested (no new API calls)
+- Integrate into BUY scoring only (do NOT change SELL scoring yet)
+- Keep the signal explainable and tunable
+
+Do NOT:
+- Remove global ownership (keep both)
+- Add projections or xG
+- Add DB schema unless strictly necessary
+
+---
+
+## Deliverables
+
+### A) League ownership computation
+Create:
+- `src/prediction/leagueOwnership/compute.ts`
+
+Export:
+```ts
+export interface LeagueOwnershipResult {
+  leagueId: number;
+  eventId: number;
+  totalEntries: number;
+  ownershipByPlayerId: Map<number, number>; // 0..1 fraction
+}
+
+export async function computeLeagueOwnership(params: {
+  leagueId: number;
+  eventId: number;
+}): Promise<LeagueOwnershipResult>
+```
+
+Implementation:
+
+- Load all entry snapshots for (leagueId, eventId)
+
+- - Only include entries that have a snapshot
+
+- Count:
+
+- - totalEntries
+
+- - for each playerId: number of entries owning that player
+
+- Convert counts to fractions:
+
+- - ownership = count / totalEntries
+
+- Return Map keyed by playerId
+
+Notes:
+
+- Use picks data only (no captain weighting)
+
+- Ignore bench vs starting XI
+
+- This is binary ownership (owned or not)
+
+
+B) Optional caching (recommended)
+
+If Redis cache exists:
+
+- Cache result for:
+
+- - key: leagueOwnership:${leagueId}:${eventId}
+
+- - TTL: 60–300 seconds
+
+
+C) Attach ownership to BUY features
+
+Update:
+
+- src/prediction/buyScoring/types.ts
+
+Add:
+```ts
+leagueOwnershipPct: number | null; // 0..1
+nonOwnershipRisk: number | null;   // derived
+```
+
+Populate in BUY scoring pipeline:
+
+- When scoring buys for a specific (leagueId, entryId, eventId):
+
+- - load league ownership once
+
+- - for each buy candidate:
+
+- - - leagueOwnershipPct = ownershipMap.get(playerId) ?? 0
+
+- - - nonOwnershipRisk = leagueOwnershipPct
+
+(Keep it simple in v1: risk == ownership fraction.)
+
+
+D) Integrate into BUY scoring
+
+Update:
+
+- src/prediction/buyScoring/constants.ts
+
+Add:
+```ts
+LEAGUE_OWNERSHIP_RISK_WEIGHT: number; // e.g. 20
+```
+
+Scoring rule:
+
+- Add:
+```ts
+buyScore += leagueOwnershipPct * LEAGUE_OWNERSHIP_RISK_WEIGHT
+```
+
+Constraints:
+
+- Clamp final score to [0, 100]
+
+- Do NOT apply if leagueOwnershipPct === null
+
+E) Reasons & explainability
+
+Add reasons when applied:
+
+- If leagueOwnershipPct >= 0.4:
+
+- - "Highly owned in your league"
+
+- If leagueOwnershipPct >= 0.6:
+
+- - "Majority of rivals already own this player"
+
+Reasons should:
+
+- appear at most once
+
+- not stack spam
+
+F) Output visibility
+
+Ensure BUY output includes:
+
+- leagueOwnershipPct
+
+- nonOwnershipRisk
+
+So the frontend (later) can show:
+
+- “Owned by 8/12 rivals”
+
+G) Tests
+
+Add tests for:
+
+- ownership calculation
+
+- scoring impact
+
+Create:
+
+- src/prediction/leagueOwnership/compute.test.ts
+
+Test cases:
+
+- 10 entries, 6 own player → ownership = 0.6
+
+- Missing snapshots ignored
+
+- Buy score increases with higher league ownership
+
+- No crash when ownership data missing
+
+Acceptance Criteria
+
+- League ownership is computed correctly per event
+
+- BUY scoring incorporates league-specific risk
+
+- Reasons clearly explain the effect
+
+- No SELL scoring changes
+
+- No new API calls added
+
+Implementation Order
+
+- Implement ownership computation
+
+- Add caching (optional)
+
+- Attach to BUY features
+
+- Integrate scoring + reasons
+
+- Add tests
+
+This step should noticeably change BUY rankings in league-specific ways.
+Keep it simple, transparent, and cheap.

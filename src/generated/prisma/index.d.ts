@@ -68,6 +68,11 @@ export type FplEntryTransfer = $Result.DefaultSelection<Prisma.$FplEntryTransfer
  * 
  */
 export type FplEntryBehaviourProfile = $Result.DefaultSelection<Prisma.$FplEntryBehaviourProfilePayload>
+/**
+ * Model FplFixture
+ * 
+ */
+export type FplFixture = $Result.DefaultSelection<Prisma.$FplFixturePayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -295,6 +300,16 @@ export class PrismaClient<
     * ```
     */
   get fplEntryBehaviourProfile(): Prisma.FplEntryBehaviourProfileDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.fplFixture`: Exposes CRUD operations for the **FplFixture** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more FplFixtures
+    * const fplFixtures = await prisma.fplFixture.findMany()
+    * ```
+    */
+  get fplFixture(): Prisma.FplFixtureDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -739,7 +754,8 @@ export namespace Prisma {
     FplEntrySnapshot: 'FplEntrySnapshot',
     FplEntryPick: 'FplEntryPick',
     FplEntryTransfer: 'FplEntryTransfer',
-    FplEntryBehaviourProfile: 'FplEntryBehaviourProfile'
+    FplEntryBehaviourProfile: 'FplEntryBehaviourProfile',
+    FplFixture: 'FplFixture'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -755,7 +771,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "fplBootstrapSnapshot" | "fplTeam" | "fplPosition" | "fplPlayer" | "fplGameweek" | "fplLeague" | "fplLeagueEntry" | "fplEntrySnapshot" | "fplEntryPick" | "fplEntryTransfer" | "fplEntryBehaviourProfile"
+      modelProps: "fplBootstrapSnapshot" | "fplTeam" | "fplPosition" | "fplPlayer" | "fplGameweek" | "fplLeague" | "fplLeagueEntry" | "fplEntrySnapshot" | "fplEntryPick" | "fplEntryTransfer" | "fplEntryBehaviourProfile" | "fplFixture"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1573,6 +1589,80 @@ export namespace Prisma {
           }
         }
       }
+      FplFixture: {
+        payload: Prisma.$FplFixturePayload<ExtArgs>
+        fields: Prisma.FplFixtureFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FplFixtureFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FplFixtureFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>
+          }
+          findFirst: {
+            args: Prisma.FplFixtureFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FplFixtureFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>
+          }
+          findMany: {
+            args: Prisma.FplFixtureFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>[]
+          }
+          create: {
+            args: Prisma.FplFixtureCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>
+          }
+          createMany: {
+            args: Prisma.FplFixtureCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.FplFixtureCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>[]
+          }
+          delete: {
+            args: Prisma.FplFixtureDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>
+          }
+          update: {
+            args: Prisma.FplFixtureUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>
+          }
+          deleteMany: {
+            args: Prisma.FplFixtureDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FplFixtureUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.FplFixtureUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>[]
+          }
+          upsert: {
+            args: Prisma.FplFixtureUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FplFixturePayload>
+          }
+          aggregate: {
+            args: Prisma.FplFixtureAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFplFixture>
+          }
+          groupBy: {
+            args: Prisma.FplFixtureGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FplFixtureGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FplFixtureCountArgs<ExtArgs>
+            result: $Utils.Optional<FplFixtureCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1692,6 +1782,7 @@ export namespace Prisma {
     fplEntryPick?: FplEntryPickOmit
     fplEntryTransfer?: FplEntryTransferOmit
     fplEntryBehaviourProfile?: FplEntryBehaviourProfileOmit
+    fplFixture?: FplFixtureOmit
   }
 
   /* Types for Logging */
@@ -14725,6 +14816,1094 @@ export namespace Prisma {
 
 
   /**
+   * Model FplFixture
+   */
+
+  export type AggregateFplFixture = {
+    _count: FplFixtureCountAggregateOutputType | null
+    _avg: FplFixtureAvgAggregateOutputType | null
+    _sum: FplFixtureSumAggregateOutputType | null
+    _min: FplFixtureMinAggregateOutputType | null
+    _max: FplFixtureMaxAggregateOutputType | null
+  }
+
+  export type FplFixtureAvgAggregateOutputType = {
+    id: number | null
+    eventId: number | null
+    teamHId: number | null
+    teamAId: number | null
+    teamHDifficulty: number | null
+    teamADifficulty: number | null
+  }
+
+  export type FplFixtureSumAggregateOutputType = {
+    id: number | null
+    eventId: number | null
+    teamHId: number | null
+    teamAId: number | null
+    teamHDifficulty: number | null
+    teamADifficulty: number | null
+  }
+
+  export type FplFixtureMinAggregateOutputType = {
+    id: number | null
+    eventId: number | null
+    teamHId: number | null
+    teamAId: number | null
+    teamHDifficulty: number | null
+    teamADifficulty: number | null
+    kickoffTime: Date | null
+    finished: boolean | null
+  }
+
+  export type FplFixtureMaxAggregateOutputType = {
+    id: number | null
+    eventId: number | null
+    teamHId: number | null
+    teamAId: number | null
+    teamHDifficulty: number | null
+    teamADifficulty: number | null
+    kickoffTime: Date | null
+    finished: boolean | null
+  }
+
+  export type FplFixtureCountAggregateOutputType = {
+    id: number
+    eventId: number
+    teamHId: number
+    teamAId: number
+    teamHDifficulty: number
+    teamADifficulty: number
+    kickoffTime: number
+    finished: number
+    _all: number
+  }
+
+
+  export type FplFixtureAvgAggregateInputType = {
+    id?: true
+    eventId?: true
+    teamHId?: true
+    teamAId?: true
+    teamHDifficulty?: true
+    teamADifficulty?: true
+  }
+
+  export type FplFixtureSumAggregateInputType = {
+    id?: true
+    eventId?: true
+    teamHId?: true
+    teamAId?: true
+    teamHDifficulty?: true
+    teamADifficulty?: true
+  }
+
+  export type FplFixtureMinAggregateInputType = {
+    id?: true
+    eventId?: true
+    teamHId?: true
+    teamAId?: true
+    teamHDifficulty?: true
+    teamADifficulty?: true
+    kickoffTime?: true
+    finished?: true
+  }
+
+  export type FplFixtureMaxAggregateInputType = {
+    id?: true
+    eventId?: true
+    teamHId?: true
+    teamAId?: true
+    teamHDifficulty?: true
+    teamADifficulty?: true
+    kickoffTime?: true
+    finished?: true
+  }
+
+  export type FplFixtureCountAggregateInputType = {
+    id?: true
+    eventId?: true
+    teamHId?: true
+    teamAId?: true
+    teamHDifficulty?: true
+    teamADifficulty?: true
+    kickoffTime?: true
+    finished?: true
+    _all?: true
+  }
+
+  export type FplFixtureAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FplFixture to aggregate.
+     */
+    where?: FplFixtureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FplFixtures to fetch.
+     */
+    orderBy?: FplFixtureOrderByWithRelationInput | FplFixtureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FplFixtureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FplFixtures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FplFixtures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned FplFixtures
+    **/
+    _count?: true | FplFixtureCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: FplFixtureAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: FplFixtureSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FplFixtureMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FplFixtureMaxAggregateInputType
+  }
+
+  export type GetFplFixtureAggregateType<T extends FplFixtureAggregateArgs> = {
+        [P in keyof T & keyof AggregateFplFixture]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFplFixture[P]>
+      : GetScalarType<T[P], AggregateFplFixture[P]>
+  }
+
+
+
+
+  export type FplFixtureGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FplFixtureWhereInput
+    orderBy?: FplFixtureOrderByWithAggregationInput | FplFixtureOrderByWithAggregationInput[]
+    by: FplFixtureScalarFieldEnum[] | FplFixtureScalarFieldEnum
+    having?: FplFixtureScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FplFixtureCountAggregateInputType | true
+    _avg?: FplFixtureAvgAggregateInputType
+    _sum?: FplFixtureSumAggregateInputType
+    _min?: FplFixtureMinAggregateInputType
+    _max?: FplFixtureMaxAggregateInputType
+  }
+
+  export type FplFixtureGroupByOutputType = {
+    id: number
+    eventId: number | null
+    teamHId: number
+    teamAId: number
+    teamHDifficulty: number
+    teamADifficulty: number
+    kickoffTime: Date | null
+    finished: boolean
+    _count: FplFixtureCountAggregateOutputType | null
+    _avg: FplFixtureAvgAggregateOutputType | null
+    _sum: FplFixtureSumAggregateOutputType | null
+    _min: FplFixtureMinAggregateOutputType | null
+    _max: FplFixtureMaxAggregateOutputType | null
+  }
+
+  type GetFplFixtureGroupByPayload<T extends FplFixtureGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FplFixtureGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FplFixtureGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FplFixtureGroupByOutputType[P]>
+            : GetScalarType<T[P], FplFixtureGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FplFixtureSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    eventId?: boolean
+    teamHId?: boolean
+    teamAId?: boolean
+    teamHDifficulty?: boolean
+    teamADifficulty?: boolean
+    kickoffTime?: boolean
+    finished?: boolean
+  }, ExtArgs["result"]["fplFixture"]>
+
+  export type FplFixtureSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    eventId?: boolean
+    teamHId?: boolean
+    teamAId?: boolean
+    teamHDifficulty?: boolean
+    teamADifficulty?: boolean
+    kickoffTime?: boolean
+    finished?: boolean
+  }, ExtArgs["result"]["fplFixture"]>
+
+  export type FplFixtureSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    eventId?: boolean
+    teamHId?: boolean
+    teamAId?: boolean
+    teamHDifficulty?: boolean
+    teamADifficulty?: boolean
+    kickoffTime?: boolean
+    finished?: boolean
+  }, ExtArgs["result"]["fplFixture"]>
+
+  export type FplFixtureSelectScalar = {
+    id?: boolean
+    eventId?: boolean
+    teamHId?: boolean
+    teamAId?: boolean
+    teamHDifficulty?: boolean
+    teamADifficulty?: boolean
+    kickoffTime?: boolean
+    finished?: boolean
+  }
+
+  export type FplFixtureOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "eventId" | "teamHId" | "teamAId" | "teamHDifficulty" | "teamADifficulty" | "kickoffTime" | "finished", ExtArgs["result"]["fplFixture"]>
+
+  export type $FplFixturePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "FplFixture"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      eventId: number | null
+      teamHId: number
+      teamAId: number
+      teamHDifficulty: number
+      teamADifficulty: number
+      kickoffTime: Date | null
+      finished: boolean
+    }, ExtArgs["result"]["fplFixture"]>
+    composites: {}
+  }
+
+  type FplFixtureGetPayload<S extends boolean | null | undefined | FplFixtureDefaultArgs> = $Result.GetResult<Prisma.$FplFixturePayload, S>
+
+  type FplFixtureCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<FplFixtureFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: FplFixtureCountAggregateInputType | true
+    }
+
+  export interface FplFixtureDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['FplFixture'], meta: { name: 'FplFixture' } }
+    /**
+     * Find zero or one FplFixture that matches the filter.
+     * @param {FplFixtureFindUniqueArgs} args - Arguments to find a FplFixture
+     * @example
+     * // Get one FplFixture
+     * const fplFixture = await prisma.fplFixture.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FplFixtureFindUniqueArgs>(args: SelectSubset<T, FplFixtureFindUniqueArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one FplFixture that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {FplFixtureFindUniqueOrThrowArgs} args - Arguments to find a FplFixture
+     * @example
+     * // Get one FplFixture
+     * const fplFixture = await prisma.fplFixture.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FplFixtureFindUniqueOrThrowArgs>(args: SelectSubset<T, FplFixtureFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FplFixture that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FplFixtureFindFirstArgs} args - Arguments to find a FplFixture
+     * @example
+     * // Get one FplFixture
+     * const fplFixture = await prisma.fplFixture.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FplFixtureFindFirstArgs>(args?: SelectSubset<T, FplFixtureFindFirstArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FplFixture that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FplFixtureFindFirstOrThrowArgs} args - Arguments to find a FplFixture
+     * @example
+     * // Get one FplFixture
+     * const fplFixture = await prisma.fplFixture.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FplFixtureFindFirstOrThrowArgs>(args?: SelectSubset<T, FplFixtureFindFirstOrThrowArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more FplFixtures that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FplFixtureFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all FplFixtures
+     * const fplFixtures = await prisma.fplFixture.findMany()
+     * 
+     * // Get first 10 FplFixtures
+     * const fplFixtures = await prisma.fplFixture.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const fplFixtureWithIdOnly = await prisma.fplFixture.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends FplFixtureFindManyArgs>(args?: SelectSubset<T, FplFixtureFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a FplFixture.
+     * @param {FplFixtureCreateArgs} args - Arguments to create a FplFixture.
+     * @example
+     * // Create one FplFixture
+     * const FplFixture = await prisma.fplFixture.create({
+     *   data: {
+     *     // ... data to create a FplFixture
+     *   }
+     * })
+     * 
+     */
+    create<T extends FplFixtureCreateArgs>(args: SelectSubset<T, FplFixtureCreateArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many FplFixtures.
+     * @param {FplFixtureCreateManyArgs} args - Arguments to create many FplFixtures.
+     * @example
+     * // Create many FplFixtures
+     * const fplFixture = await prisma.fplFixture.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FplFixtureCreateManyArgs>(args?: SelectSubset<T, FplFixtureCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many FplFixtures and returns the data saved in the database.
+     * @param {FplFixtureCreateManyAndReturnArgs} args - Arguments to create many FplFixtures.
+     * @example
+     * // Create many FplFixtures
+     * const fplFixture = await prisma.fplFixture.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many FplFixtures and only return the `id`
+     * const fplFixtureWithIdOnly = await prisma.fplFixture.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends FplFixtureCreateManyAndReturnArgs>(args?: SelectSubset<T, FplFixtureCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a FplFixture.
+     * @param {FplFixtureDeleteArgs} args - Arguments to delete one FplFixture.
+     * @example
+     * // Delete one FplFixture
+     * const FplFixture = await prisma.fplFixture.delete({
+     *   where: {
+     *     // ... filter to delete one FplFixture
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FplFixtureDeleteArgs>(args: SelectSubset<T, FplFixtureDeleteArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one FplFixture.
+     * @param {FplFixtureUpdateArgs} args - Arguments to update one FplFixture.
+     * @example
+     * // Update one FplFixture
+     * const fplFixture = await prisma.fplFixture.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FplFixtureUpdateArgs>(args: SelectSubset<T, FplFixtureUpdateArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more FplFixtures.
+     * @param {FplFixtureDeleteManyArgs} args - Arguments to filter FplFixtures to delete.
+     * @example
+     * // Delete a few FplFixtures
+     * const { count } = await prisma.fplFixture.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FplFixtureDeleteManyArgs>(args?: SelectSubset<T, FplFixtureDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FplFixtures.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FplFixtureUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many FplFixtures
+     * const fplFixture = await prisma.fplFixture.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FplFixtureUpdateManyArgs>(args: SelectSubset<T, FplFixtureUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FplFixtures and returns the data updated in the database.
+     * @param {FplFixtureUpdateManyAndReturnArgs} args - Arguments to update many FplFixtures.
+     * @example
+     * // Update many FplFixtures
+     * const fplFixture = await prisma.fplFixture.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more FplFixtures and only return the `id`
+     * const fplFixtureWithIdOnly = await prisma.fplFixture.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends FplFixtureUpdateManyAndReturnArgs>(args: SelectSubset<T, FplFixtureUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one FplFixture.
+     * @param {FplFixtureUpsertArgs} args - Arguments to update or create a FplFixture.
+     * @example
+     * // Update or create a FplFixture
+     * const fplFixture = await prisma.fplFixture.upsert({
+     *   create: {
+     *     // ... data to create a FplFixture
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the FplFixture we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FplFixtureUpsertArgs>(args: SelectSubset<T, FplFixtureUpsertArgs<ExtArgs>>): Prisma__FplFixtureClient<$Result.GetResult<Prisma.$FplFixturePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of FplFixtures.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FplFixtureCountArgs} args - Arguments to filter FplFixtures to count.
+     * @example
+     * // Count the number of FplFixtures
+     * const count = await prisma.fplFixture.count({
+     *   where: {
+     *     // ... the filter for the FplFixtures we want to count
+     *   }
+     * })
+    **/
+    count<T extends FplFixtureCountArgs>(
+      args?: Subset<T, FplFixtureCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FplFixtureCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a FplFixture.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FplFixtureAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FplFixtureAggregateArgs>(args: Subset<T, FplFixtureAggregateArgs>): Prisma.PrismaPromise<GetFplFixtureAggregateType<T>>
+
+    /**
+     * Group by FplFixture.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FplFixtureGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FplFixtureGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FplFixtureGroupByArgs['orderBy'] }
+        : { orderBy?: FplFixtureGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FplFixtureGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFplFixtureGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the FplFixture model
+   */
+  readonly fields: FplFixtureFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for FplFixture.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FplFixtureClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the FplFixture model
+   */
+  interface FplFixtureFieldRefs {
+    readonly id: FieldRef<"FplFixture", 'Int'>
+    readonly eventId: FieldRef<"FplFixture", 'Int'>
+    readonly teamHId: FieldRef<"FplFixture", 'Int'>
+    readonly teamAId: FieldRef<"FplFixture", 'Int'>
+    readonly teamHDifficulty: FieldRef<"FplFixture", 'Int'>
+    readonly teamADifficulty: FieldRef<"FplFixture", 'Int'>
+    readonly kickoffTime: FieldRef<"FplFixture", 'DateTime'>
+    readonly finished: FieldRef<"FplFixture", 'Boolean'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * FplFixture findUnique
+   */
+  export type FplFixtureFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * Filter, which FplFixture to fetch.
+     */
+    where: FplFixtureWhereUniqueInput
+  }
+
+  /**
+   * FplFixture findUniqueOrThrow
+   */
+  export type FplFixtureFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * Filter, which FplFixture to fetch.
+     */
+    where: FplFixtureWhereUniqueInput
+  }
+
+  /**
+   * FplFixture findFirst
+   */
+  export type FplFixtureFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * Filter, which FplFixture to fetch.
+     */
+    where?: FplFixtureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FplFixtures to fetch.
+     */
+    orderBy?: FplFixtureOrderByWithRelationInput | FplFixtureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FplFixtures.
+     */
+    cursor?: FplFixtureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FplFixtures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FplFixtures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FplFixtures.
+     */
+    distinct?: FplFixtureScalarFieldEnum | FplFixtureScalarFieldEnum[]
+  }
+
+  /**
+   * FplFixture findFirstOrThrow
+   */
+  export type FplFixtureFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * Filter, which FplFixture to fetch.
+     */
+    where?: FplFixtureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FplFixtures to fetch.
+     */
+    orderBy?: FplFixtureOrderByWithRelationInput | FplFixtureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FplFixtures.
+     */
+    cursor?: FplFixtureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FplFixtures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FplFixtures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FplFixtures.
+     */
+    distinct?: FplFixtureScalarFieldEnum | FplFixtureScalarFieldEnum[]
+  }
+
+  /**
+   * FplFixture findMany
+   */
+  export type FplFixtureFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * Filter, which FplFixtures to fetch.
+     */
+    where?: FplFixtureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FplFixtures to fetch.
+     */
+    orderBy?: FplFixtureOrderByWithRelationInput | FplFixtureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing FplFixtures.
+     */
+    cursor?: FplFixtureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FplFixtures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FplFixtures.
+     */
+    skip?: number
+    distinct?: FplFixtureScalarFieldEnum | FplFixtureScalarFieldEnum[]
+  }
+
+  /**
+   * FplFixture create
+   */
+  export type FplFixtureCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * The data needed to create a FplFixture.
+     */
+    data: XOR<FplFixtureCreateInput, FplFixtureUncheckedCreateInput>
+  }
+
+  /**
+   * FplFixture createMany
+   */
+  export type FplFixtureCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many FplFixtures.
+     */
+    data: FplFixtureCreateManyInput | FplFixtureCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FplFixture createManyAndReturn
+   */
+  export type FplFixtureCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * The data used to create many FplFixtures.
+     */
+    data: FplFixtureCreateManyInput | FplFixtureCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FplFixture update
+   */
+  export type FplFixtureUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * The data needed to update a FplFixture.
+     */
+    data: XOR<FplFixtureUpdateInput, FplFixtureUncheckedUpdateInput>
+    /**
+     * Choose, which FplFixture to update.
+     */
+    where: FplFixtureWhereUniqueInput
+  }
+
+  /**
+   * FplFixture updateMany
+   */
+  export type FplFixtureUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update FplFixtures.
+     */
+    data: XOR<FplFixtureUpdateManyMutationInput, FplFixtureUncheckedUpdateManyInput>
+    /**
+     * Filter which FplFixtures to update
+     */
+    where?: FplFixtureWhereInput
+    /**
+     * Limit how many FplFixtures to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FplFixture updateManyAndReturn
+   */
+  export type FplFixtureUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * The data used to update FplFixtures.
+     */
+    data: XOR<FplFixtureUpdateManyMutationInput, FplFixtureUncheckedUpdateManyInput>
+    /**
+     * Filter which FplFixtures to update
+     */
+    where?: FplFixtureWhereInput
+    /**
+     * Limit how many FplFixtures to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FplFixture upsert
+   */
+  export type FplFixtureUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * The filter to search for the FplFixture to update in case it exists.
+     */
+    where: FplFixtureWhereUniqueInput
+    /**
+     * In case the FplFixture found by the `where` argument doesn't exist, create a new FplFixture with this data.
+     */
+    create: XOR<FplFixtureCreateInput, FplFixtureUncheckedCreateInput>
+    /**
+     * In case the FplFixture was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FplFixtureUpdateInput, FplFixtureUncheckedUpdateInput>
+  }
+
+  /**
+   * FplFixture delete
+   */
+  export type FplFixtureDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+    /**
+     * Filter which FplFixture to delete.
+     */
+    where: FplFixtureWhereUniqueInput
+  }
+
+  /**
+   * FplFixture deleteMany
+   */
+  export type FplFixtureDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FplFixtures to delete
+     */
+    where?: FplFixtureWhereInput
+    /**
+     * Limit how many FplFixtures to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * FplFixture without action
+   */
+  export type FplFixtureDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FplFixture
+     */
+    select?: FplFixtureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FplFixture
+     */
+    omit?: FplFixtureOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -14884,6 +16063,20 @@ export namespace Prisma {
   };
 
   export type FplEntryBehaviourProfileScalarFieldEnum = (typeof FplEntryBehaviourProfileScalarFieldEnum)[keyof typeof FplEntryBehaviourProfileScalarFieldEnum]
+
+
+  export const FplFixtureScalarFieldEnum: {
+    id: 'id',
+    eventId: 'eventId',
+    teamHId: 'teamHId',
+    teamAId: 'teamAId',
+    teamHDifficulty: 'teamHDifficulty',
+    teamADifficulty: 'teamADifficulty',
+    kickoffTime: 'kickoffTime',
+    finished: 'finished'
+  };
+
+  export type FplFixtureScalarFieldEnum = (typeof FplFixtureScalarFieldEnum)[keyof typeof FplFixtureScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -15779,6 +16972,75 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"FplEntryBehaviourProfile"> | Date | string
   }
 
+  export type FplFixtureWhereInput = {
+    AND?: FplFixtureWhereInput | FplFixtureWhereInput[]
+    OR?: FplFixtureWhereInput[]
+    NOT?: FplFixtureWhereInput | FplFixtureWhereInput[]
+    id?: IntFilter<"FplFixture"> | number
+    eventId?: IntNullableFilter<"FplFixture"> | number | null
+    teamHId?: IntFilter<"FplFixture"> | number
+    teamAId?: IntFilter<"FplFixture"> | number
+    teamHDifficulty?: IntFilter<"FplFixture"> | number
+    teamADifficulty?: IntFilter<"FplFixture"> | number
+    kickoffTime?: DateTimeNullableFilter<"FplFixture"> | Date | string | null
+    finished?: BoolFilter<"FplFixture"> | boolean
+  }
+
+  export type FplFixtureOrderByWithRelationInput = {
+    id?: SortOrder
+    eventId?: SortOrderInput | SortOrder
+    teamHId?: SortOrder
+    teamAId?: SortOrder
+    teamHDifficulty?: SortOrder
+    teamADifficulty?: SortOrder
+    kickoffTime?: SortOrderInput | SortOrder
+    finished?: SortOrder
+  }
+
+  export type FplFixtureWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: FplFixtureWhereInput | FplFixtureWhereInput[]
+    OR?: FplFixtureWhereInput[]
+    NOT?: FplFixtureWhereInput | FplFixtureWhereInput[]
+    eventId?: IntNullableFilter<"FplFixture"> | number | null
+    teamHId?: IntFilter<"FplFixture"> | number
+    teamAId?: IntFilter<"FplFixture"> | number
+    teamHDifficulty?: IntFilter<"FplFixture"> | number
+    teamADifficulty?: IntFilter<"FplFixture"> | number
+    kickoffTime?: DateTimeNullableFilter<"FplFixture"> | Date | string | null
+    finished?: BoolFilter<"FplFixture"> | boolean
+  }, "id">
+
+  export type FplFixtureOrderByWithAggregationInput = {
+    id?: SortOrder
+    eventId?: SortOrderInput | SortOrder
+    teamHId?: SortOrder
+    teamAId?: SortOrder
+    teamHDifficulty?: SortOrder
+    teamADifficulty?: SortOrder
+    kickoffTime?: SortOrderInput | SortOrder
+    finished?: SortOrder
+    _count?: FplFixtureCountOrderByAggregateInput
+    _avg?: FplFixtureAvgOrderByAggregateInput
+    _max?: FplFixtureMaxOrderByAggregateInput
+    _min?: FplFixtureMinOrderByAggregateInput
+    _sum?: FplFixtureSumOrderByAggregateInput
+  }
+
+  export type FplFixtureScalarWhereWithAggregatesInput = {
+    AND?: FplFixtureScalarWhereWithAggregatesInput | FplFixtureScalarWhereWithAggregatesInput[]
+    OR?: FplFixtureScalarWhereWithAggregatesInput[]
+    NOT?: FplFixtureScalarWhereWithAggregatesInput | FplFixtureScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"FplFixture"> | number
+    eventId?: IntNullableWithAggregatesFilter<"FplFixture"> | number | null
+    teamHId?: IntWithAggregatesFilter<"FplFixture"> | number
+    teamAId?: IntWithAggregatesFilter<"FplFixture"> | number
+    teamHDifficulty?: IntWithAggregatesFilter<"FplFixture"> | number
+    teamADifficulty?: IntWithAggregatesFilter<"FplFixture"> | number
+    kickoffTime?: DateTimeNullableWithAggregatesFilter<"FplFixture"> | Date | string | null
+    finished?: BoolWithAggregatesFilter<"FplFixture"> | boolean
+  }
+
   export type FplBootstrapSnapshotCreateInput = {
     id?: string
     fetchedAt?: Date | string
@@ -16615,6 +17877,83 @@ export namespace Prisma {
     hitRate?: FloatFieldUpdateOperationsInput | number
     lastTransferAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type FplFixtureCreateInput = {
+    id: number
+    eventId?: number | null
+    teamHId: number
+    teamAId: number
+    teamHDifficulty: number
+    teamADifficulty: number
+    kickoffTime?: Date | string | null
+    finished: boolean
+  }
+
+  export type FplFixtureUncheckedCreateInput = {
+    id: number
+    eventId?: number | null
+    teamHId: number
+    teamAId: number
+    teamHDifficulty: number
+    teamADifficulty: number
+    kickoffTime?: Date | string | null
+    finished: boolean
+  }
+
+  export type FplFixtureUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    eventId?: NullableIntFieldUpdateOperationsInput | number | null
+    teamHId?: IntFieldUpdateOperationsInput | number
+    teamAId?: IntFieldUpdateOperationsInput | number
+    teamHDifficulty?: IntFieldUpdateOperationsInput | number
+    teamADifficulty?: IntFieldUpdateOperationsInput | number
+    kickoffTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    finished?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type FplFixtureUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    eventId?: NullableIntFieldUpdateOperationsInput | number | null
+    teamHId?: IntFieldUpdateOperationsInput | number
+    teamAId?: IntFieldUpdateOperationsInput | number
+    teamHDifficulty?: IntFieldUpdateOperationsInput | number
+    teamADifficulty?: IntFieldUpdateOperationsInput | number
+    kickoffTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    finished?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type FplFixtureCreateManyInput = {
+    id: number
+    eventId?: number | null
+    teamHId: number
+    teamAId: number
+    teamHDifficulty: number
+    teamADifficulty: number
+    kickoffTime?: Date | string | null
+    finished: boolean
+  }
+
+  export type FplFixtureUpdateManyMutationInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    eventId?: NullableIntFieldUpdateOperationsInput | number | null
+    teamHId?: IntFieldUpdateOperationsInput | number
+    teamAId?: IntFieldUpdateOperationsInput | number
+    teamHDifficulty?: IntFieldUpdateOperationsInput | number
+    teamADifficulty?: IntFieldUpdateOperationsInput | number
+    kickoffTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    finished?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type FplFixtureUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    eventId?: NullableIntFieldUpdateOperationsInput | number | null
+    teamHId?: IntFieldUpdateOperationsInput | number
+    teamAId?: IntFieldUpdateOperationsInput | number
+    teamHDifficulty?: IntFieldUpdateOperationsInput | number
+    teamADifficulty?: IntFieldUpdateOperationsInput | number
+    kickoffTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    finished?: BoolFieldUpdateOperationsInput | boolean
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -17461,6 +18800,57 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type FplFixtureCountOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    teamHId?: SortOrder
+    teamAId?: SortOrder
+    teamHDifficulty?: SortOrder
+    teamADifficulty?: SortOrder
+    kickoffTime?: SortOrder
+    finished?: SortOrder
+  }
+
+  export type FplFixtureAvgOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    teamHId?: SortOrder
+    teamAId?: SortOrder
+    teamHDifficulty?: SortOrder
+    teamADifficulty?: SortOrder
+  }
+
+  export type FplFixtureMaxOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    teamHId?: SortOrder
+    teamAId?: SortOrder
+    teamHDifficulty?: SortOrder
+    teamADifficulty?: SortOrder
+    kickoffTime?: SortOrder
+    finished?: SortOrder
+  }
+
+  export type FplFixtureMinOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    teamHId?: SortOrder
+    teamAId?: SortOrder
+    teamHDifficulty?: SortOrder
+    teamADifficulty?: SortOrder
+    kickoffTime?: SortOrder
+    finished?: SortOrder
+  }
+
+  export type FplFixtureSumOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    teamHId?: SortOrder
+    teamAId?: SortOrder
+    teamHDifficulty?: SortOrder
+    teamADifficulty?: SortOrder
   }
 
   export type StringFieldUpdateOperationsInput = {

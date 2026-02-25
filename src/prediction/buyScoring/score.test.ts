@@ -6,7 +6,19 @@ vi.mock("./context", () => ({
 vi.mock("./pool", () => ({
   loadBuyPool: vi.fn(),
 }));
+vi.mock("../fixtures/teamUpcomingScores", () => ({
+  loadTeamUpcomingFixtureScores: vi.fn().mockResolvedValue(new Map()),
+}));
+vi.mock("../leagueOwnership/compute", () => ({
+  getLeagueOwnership: vi.fn().mockResolvedValue({
+    leagueId: 1,
+    eventId: 5,
+    totalEntries: 10,
+    ownershipByPlayerId: new Map(),
+  }),
+}));
 
+import { getLeagueOwnership } from "../leagueOwnership/compute";
 import { loadBuyContext } from "./context";
 import { loadBuyPool } from "./pool";
 import { scoreBuyCandidates } from "./score";
@@ -221,8 +233,72 @@ describe("scoreBuyCandidates", () => {
         nowCost: 85,
         positionId: 3,
         teamId: 2,
+        upcomingFixtureScore: null,
+        leagueOwnershipPct: 0,
+        nonOwnershipRisk: 0,
       },
     });
+  });
+
+  it("includes leagueOwnershipPct and nonOwnershipRisk in features for frontend (e.g. Owned by 8/12 rivals)", async () => {
+    vi.mocked(loadBuyPool).mockResolvedValue([
+      poolPlayer(1, { teamId: 5 }),
+    ]);
+    vi.mocked(getLeagueOwnership).mockResolvedValueOnce({
+      leagueId: 1,
+      eventId: 5,
+      totalEntries: 12,
+      ownershipByPlayerId: new Map([[1, 8 / 12]]),
+    });
+
+    const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
+
+    expect(result.scores[0].features).toHaveProperty("leagueOwnershipPct");
+    expect(result.scores[0].features).toHaveProperty("nonOwnershipRisk");
+    expect(result.scores[0].features.leagueOwnershipPct).toBeCloseTo(8 / 12);
+    expect(result.scores[0].features.nonOwnershipRisk).toBeCloseTo(8 / 12);
+  });
+
+  it("buy score increases with higher league ownership", async () => {
+    vi.mocked(loadBuyPool).mockResolvedValue([
+      poolPlayer(1, { status: "a", selectedByPercent: 15, nowCost: 50 }),
+      poolPlayer(2, { status: "a", selectedByPercent: 15, nowCost: 50 }),
+    ]);
+    vi.mocked(getLeagueOwnership).mockResolvedValueOnce({
+      leagueId: 1,
+      eventId: 5,
+      totalEntries: 10,
+      ownershipByPlayerId: new Map([
+        [1, 0.8],
+        [2, 0.2],
+      ]),
+    });
+
+    const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
+
+    const score1 = result.scores.find((s) => s.playerId === 1);
+    const score2 = result.scores.find((s) => s.playerId === 2);
+    expect(score1!.buyScore).toBeGreaterThan(score2!.buyScore);
+    expect(score1!.features.leagueOwnershipPct).toBe(0.8);
+    expect(score2!.features.leagueOwnershipPct).toBe(0.2);
+  });
+
+  it("does not crash when ownership data is missing (empty map)", async () => {
+    vi.mocked(loadBuyPool).mockResolvedValue([
+      poolPlayer(99, { status: "a" }),
+    ]);
+    vi.mocked(getLeagueOwnership).mockResolvedValueOnce({
+      leagueId: 1,
+      eventId: 5,
+      totalEntries: 0,
+      ownershipByPlayerId: new Map(),
+    });
+
+    const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
+
+    expect(result.scores).toHaveLength(1);
+    expect(result.scores[0].features.leagueOwnershipPct).toBe(0);
+    expect(result.scores[0].features.nonOwnershipRisk).toBe(0);
   });
 
   it("throws SquadNotFoundError when loadBuyContext throws", async () => {

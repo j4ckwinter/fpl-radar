@@ -235,6 +235,17 @@ exports.Prisma.FplEntryBehaviourProfileScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.FplFixtureScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  teamHId: 'teamHId',
+  teamAId: 'teamAId',
+  teamHDifficulty: 'teamHDifficulty',
+  teamADifficulty: 'teamADifficulty',
+  kickoffTime: 'kickoffTime',
+  finished: 'finished'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -262,7 +273,8 @@ exports.Prisma.ModelName = {
   FplEntrySnapshot: 'FplEntrySnapshot',
   FplEntryPick: 'FplEntryPick',
   FplEntryTransfer: 'FplEntryTransfer',
-  FplEntryBehaviourProfile: 'FplEntryBehaviourProfile'
+  FplEntryBehaviourProfile: 'FplEntryBehaviourProfile',
+  FplFixture: 'FplFixture'
 };
 
 /**

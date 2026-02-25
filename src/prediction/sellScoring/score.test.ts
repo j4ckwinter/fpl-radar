@@ -6,6 +6,9 @@ vi.mock("../../lib/prisma", () => ({
     fplPlayer: { findMany: vi.fn() },
   },
 }));
+vi.mock("../fixtures/teamUpcomingScores", () => ({
+  loadTeamUpcomingFixtureScores: vi.fn().mockResolvedValue(new Map()),
+}));
 vi.mock("./features", () => ({
   extractSellFeatures: vi.fn(),
 }));
@@ -69,6 +72,7 @@ function features(overrides: Partial<{
   isBenched: boolean;
   isCaptainOrVice: boolean;
   nowCost: number;
+  upcomingFixtureScore: number | null;
 }> = {}) {
   return {
     isFlagged: false,
@@ -78,6 +82,7 @@ function features(overrides: Partial<{
     isBenched: false,
     isCaptainOrVice: false,
     nowCost: 50,
+    upcomingFixtureScore: null,
     ...overrides,
   };
 }
@@ -88,9 +93,9 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1), pick(2)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50 },
-      { id: 2, status: "a", news: null, selectedByPercent: 40, nowCost: 55 },
-    ]);
+      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1 },
+      { id: 2, status: "a", news: null, selectedByPercent: 40, nowCost: 55, teamId: 2 },
+    ] as never);
     vi.mocked(extractSellFeatures).mockReturnValue(
       new Map([
         [1, features()],
@@ -130,6 +135,7 @@ describe("scoreSellCandidates", () => {
         news: true,
         selectedByPercent: true,
         nowCost: true,
+        teamId: true,
       },
     });
   });
@@ -190,10 +196,10 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1), pick(2), pick(3)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50 },
-      { id: 2, status: "a", news: null, selectedByPercent: 10, nowCost: 50 },
-      { id: 3, status: "i", news: null, selectedByPercent: 10, nowCost: 50 },
-    ]);
+      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1 },
+      { id: 2, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 2 },
+      { id: 3, status: "i", news: null, selectedByPercent: 10, nowCost: 50, teamId: 3 },
+    ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
 
@@ -224,13 +230,12 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "i", news: "Injured", selectedByPercent: 35, nowCost: 50 },
-    ]);
+      { id: 1, status: "i", news: "Injured", selectedByPercent: 35, nowCost: 50, teamId: 1 },
+    ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
 
     expect(result.scores[0].reasons).toContain("Flagged / availability concern");
-    expect(result.scores[0].reasons).toContain("On the bench");
     expect(result.scores[0].reasons).toContain("Captain/vice captain");
     expect(result.scores[0].reasons.some((r) => r.startsWith("News:"))).toBe(
       true
@@ -259,8 +264,9 @@ describe("scoreSellCandidates", () => {
         news: null,
         selectedByPercent: SELL_SCORE.TEMPLATE_THRESHOLD,
         nowCost: 50,
+        teamId: 1,
       },
-    ]);
+    ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
 
@@ -268,10 +274,11 @@ describe("scoreSellCandidates", () => {
   });
 
   it("respects topN and caps at 15", async () => {
-    const manyEntries = Array.from({ length: 20 }, (_, i) => [
-      i + 1,
-      features({ nowCost: 50 - i }),
-    ]);
+    const manyEntries: Array<[number, ReturnType<typeof features>]> =
+      Array.from({ length: 20 }, (_, i) => [
+        i + 1,
+        features({ nowCost: 50 - i }),
+      ]);
     vi.mocked(extractSellFeatures).mockReturnValue(new Map(manyEntries));
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshotWithPicks(
@@ -285,6 +292,7 @@ describe("scoreSellCandidates", () => {
         news: null,
         selectedByPercent: 10,
         nowCost: 50,
+        teamId: 1,
       })) as never
     );
 
@@ -306,8 +314,8 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "a", news: null, selectedByPercent: 25, nowCost: 50 },
-    ]);
+      { id: 1, status: "a", news: null, selectedByPercent: 25, nowCost: 50, teamId: 1 },
+    ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
 
@@ -323,8 +331,42 @@ describe("scoreSellCandidates", () => {
         isBenched: false,
         isCaptainOrVice: false,
         nowCost: 50,
+        upcomingFixtureScore: null,
       },
     });
+  });
+
+  it("benched and starting player with identical other features get same sellScore", async () => {
+    const baseFeatures = {
+      isFlagged: false,
+      status: "a",
+      hasNews: false,
+      selectedByPercent: 10,
+      isCaptainOrVice: false,
+      nowCost: 50,
+    };
+    vi.mocked(extractSellFeatures).mockReturnValue(
+      new Map([
+        [1, features({ ...baseFeatures, isBenched: true })],
+        [2, features({ ...baseFeatures, isBenched: false })],
+      ])
+    );
+    vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
+      snapshotWithPicks([pick(1), pick(2)]) as never
+    );
+    vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
+      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1 },
+      { id: 2, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 2 },
+    ] as never);
+
+    const result = await scoreSellCandidates({ leagueId, entryId, eventId });
+
+    expect(result.scores).toHaveLength(2);
+    expect(result.scores[0].sellScore).toBe(result.scores[1].sellScore);
+    const benchedScore = result.scores.find((s) => s.features.isBenched);
+    const startingScore = result.scores.find((s) => !s.features.isBenched);
+    expect(benchedScore?.features.isBenched).toBe(true);
+    expect(startingScore?.features.isBenched).toBe(false);
   });
 
   it("clamps sellScore to 0-100", async () => {
@@ -347,8 +389,8 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "u", news: "Out", selectedByPercent: 0, nowCost: 50 },
-    ]);
+      { id: 1, status: "u", news: "Out", selectedByPercent: 0, nowCost: 50, teamId: 1 },
+    ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
 

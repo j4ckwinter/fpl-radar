@@ -23,12 +23,14 @@ function playerData(overrides: Partial<{
   news: string | null;
   selectedByPercent: number | null;
   nowCost: number;
+  teamId: number;
 }> = {}) {
   return {
     status: "a",
     news: null,
     selectedByPercent: 10,
     nowCost: 50,
+    teamId: 1,
     ...overrides,
   };
 }
@@ -59,6 +61,7 @@ describe("extractSellFeatures", () => {
       isBenched: false,
       isCaptainOrVice: false,
       nowCost: 50,
+      upcomingFixtureScore: null,
     });
   });
 
@@ -135,7 +138,35 @@ describe("extractSellFeatures", () => {
       isBenched: false,
       isCaptainOrVice: false,
       nowCost: 0,
+      upcomingFixtureScore: null,
     });
+  });
+
+  it("sets upcomingFixtureScore from teamUpcomingScores when provided", () => {
+    const teamUpcomingScores = new Map([
+      [1, 5],
+      [2, -3],
+    ]);
+    const result = extractSellFeatures({
+      picks: [pick(1), pick(2)],
+      playersById: new Map([
+        [1, playerData({ teamId: 1 })],
+        [2, playerData({ teamId: 2 })],
+      ]),
+      teamUpcomingScores,
+    });
+    expect(result.get(1)!.upcomingFixtureScore).toBe(5);
+    expect(result.get(2)!.upcomingFixtureScore).toBe(-3);
+  });
+
+  it("sets upcomingFixtureScore null when team not in teamUpcomingScores", () => {
+    const teamUpcomingScores = new Map([[1, 2]]);
+    const result = extractSellFeatures({
+      picks: [pick(1)],
+      playersById: new Map([[1, playerData({ teamId: 99 })]]),
+      teamUpcomingScores,
+    });
+    expect(result.get(1)!.upcomingFixtureScore).toBe(null);
   });
 
   it("returns features for multiple picks", () => {

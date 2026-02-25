@@ -160,3 +160,18 @@ model FplEntryBehaviourProfile {
   updatedAt         DateTime @updatedAt
   entry             FplLeagueEntry @relation(fields: [entryId], references: [id])
 }
+
+model FplFixture {
+  id               Int       @id
+  eventId          Int?
+  teamHId          Int
+  teamAId          Int
+  teamHDifficulty  Int
+  teamADifficulty  Int
+  kickoffTime      DateTime?
+  finished         Boolean
+
+  @@index([eventId])
+  @@index([teamHId])
+  @@index([teamAId])
+}

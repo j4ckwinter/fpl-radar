@@ -44,5 +44,10 @@ export interface BuyCandidateScore {
     nowCost: number;
     positionId: number;
     teamId: number;
+    upcomingFixtureScore: number | null;
+    /** Fraction of league entries (with snapshot) that own this player, 0..1. */
+    leagueOwnershipPct: number | null;
+    /** Derived risk of not owning (v1: same as leagueOwnershipPct). */
+    nonOwnershipRisk: number | null;
   };
 }

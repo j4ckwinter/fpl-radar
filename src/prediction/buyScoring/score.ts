@@ -1,3 +1,5 @@
+import { loadTeamUpcomingFixtureScores } from "../fixtures/teamUpcomingScores";
+import { getLeagueOwnership } from "../leagueOwnership/compute";
 import { loadBuyContext } from "./context";
 import { loadBuyPool } from "./pool";
 import {
@@ -19,11 +21,18 @@ export async function scoreBuyCandidates(
 
   const { ownedPlayerIds } = await loadBuyContext({ leagueId, entryId, eventId });
 
-  const pool = await loadBuyPool({ ownedPlayerIds });
+  const [pool, teamUpcomingScores, leagueOwnership] = await Promise.all([
+    loadBuyPool({ ownedPlayerIds }),
+    loadTeamUpcomingFixtureScores({ eventId }),
+    getLeagueOwnership({ leagueId, eventId }),
+  ]);
 
   const scores: BuyCandidateScore[] = [];
 
   for (const p of pool) {
+    const upcomingFixtureScore = teamUpcomingScores.get(p.teamId) ?? null;
+    const leagueOwnershipPct = leagueOwnership.ownershipByPlayerId.get(p.id) ?? 0;
+    const nonOwnershipRisk = leagueOwnershipPct;
     const hasNews = p.news !== null && p.news.trim().length > 0;
     const available = isAvailable(p.status);
     const flaggedOrUnavailable = isFlaggedOrUnavailable(p.status);
@@ -51,6 +60,9 @@ export async function scoreBuyCandidates(
     if (p.nowCost >= BUY_SCORE.VERY_HIGH_PRICE_THRESHOLD) {
       score -= BUY_SCORE.PRICE_VERY_HIGH_PENALTY;
     }
+    if (leagueOwnershipPct !== null) {
+      score += leagueOwnershipPct * BUY_SCORE.LEAGUE_OWNERSHIP_RISK_WEIGHT;
+    }
 
     const reasons: string[] = [];
     if (
@@ -71,6 +83,13 @@ export async function scoreBuyCandidates(
     if (p.nowCost >= BUY_SCORE.VERY_HIGH_PRICE_THRESHOLD) {
       reasons.push(BUY_REASON.VERY_HIGH_PRICE);
     }
+    if (leagueOwnershipPct !== null) {
+      if (leagueOwnershipPct >= 0.6) {
+        reasons.push(BUY_REASON.LEAGUE_MAJORITY_OWN);
+      } else if (leagueOwnershipPct >= 0.4) {
+        reasons.push(BUY_REASON.LEAGUE_HIGH_OWNERSHIP);
+      }
+    }
 
     scores.push({
       playerId: p.id,
@@ -84,6 +103,9 @@ export async function scoreBuyCandidates(
         nowCost: p.nowCost,
         positionId: p.positionId,
         teamId: p.teamId,
+        upcomingFixtureScore,
+        leagueOwnershipPct,
+        nonOwnershipRisk,
       },
     });
   }

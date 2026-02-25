@@ -22,9 +22,6 @@ export function buildReasons(
   if (features.status === "u") {
     reasons.push(SELL_REASON.UNAVAILABLE);
   }
-  if (features.isBenched) {
-    reasons.push(SELL_REASON.BENCHED);
-  }
   if (features.isCaptainOrVice) {
     reasons.push(SELL_REASON.CAPTAIN_OR_VICE);
   }

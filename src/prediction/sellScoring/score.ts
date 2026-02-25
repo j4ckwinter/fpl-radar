@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { SquadNotFoundError } from "../errors";
+import { loadTeamUpcomingFixtureScores } from "../fixtures/teamUpcomingScores";
 import {
   SELL_SCORE,
   DEFAULT_TOP_N,
@@ -33,16 +34,20 @@ export async function scoreSellCandidates(
   }
 
   const playerIds = snapshot.picks.map((p) => p.playerId);
-  const players = await prisma.fplPlayer.findMany({
-    where: { id: { in: playerIds } },
-    select: {
-      id: true,
-      status: true,
-      news: true,
-      selectedByPercent: true,
-      nowCost: true,
-    },
-  });
+  const [players, teamUpcomingScores] = await Promise.all([
+    prisma.fplPlayer.findMany({
+      where: { id: { in: playerIds } },
+      select: {
+        id: true,
+        status: true,
+        news: true,
+        selectedByPercent: true,
+        nowCost: true,
+        teamId: true,
+      },
+    }),
+    loadTeamUpcomingFixtureScores({ eventId }),
+  ]);
 
   const playersById = new Map(
     players.map((p) => [
@@ -52,6 +57,7 @@ export async function scoreSellCandidates(
         news: p.news,
         selectedByPercent: p.selectedByPercent,
         nowCost: p.nowCost,
+        teamId: p.teamId,
       },
     ])
   );
@@ -63,7 +69,11 @@ export async function scoreSellCandidates(
     isViceCaptain: p.isViceCaptain,
   }));
 
-  const featuresByPlayerId = extractSellFeatures({ picks, playersById });
+  const featuresByPlayerId = extractSellFeatures({
+    picks,
+    playersById,
+    teamUpcomingScores,
+  });
 
   const newsByPlayerId = new Map(players.map((p) => [p.id, newsToSnippet(p.news)]));
 
@@ -73,7 +83,6 @@ export async function scoreSellCandidates(
     let score = SELL_SCORE.BASE;
     if (features.isFlagged) score += SELL_SCORE.FLAGGED;
     if (features.status === "u") score += SELL_SCORE.UNAVAILABLE_EXTRA;
-    if (features.isBenched) score += SELL_SCORE.BENCHED;
     if (features.hasNews) score += SELL_SCORE.HAS_NEWS;
     if (features.isCaptainOrVice) score -= SELL_SCORE.CAPTAIN_OR_VICE_PENALTY;
     const templateHold =

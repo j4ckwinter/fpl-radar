@@ -2,18 +2,22 @@ import { loadSquadState } from "../squadLoader";
 import { generateSingleTransferCandidates } from "../candidateGenerator";
 import { scoreSellCandidates } from "../sellScoring";
 import { scoreBuyCandidates } from "../buyScoring";
-import { TRANSFER_PREDICTION } from "./constants";
+import { DIVERSITY, TRANSFER_PREDICTION } from "./constants";
+import { diversifyPredictions } from "./diversify";
 import { clampScore, buildReasons, softmaxProbabilities } from "./predict.utils";
 import type { PredictTransfersForEntryParams, TransferPrediction } from "./types";
 
 export async function predictTransfersForEntry(
   params: PredictTransfersForEntryParams
-): Promise<{ predictions: TransferPrediction[] }> {
+): Promise<{
+  predictions: TransferPrediction[];
+  meta?: { droppedForDiversity: number };
+}> {
   const {
     leagueId,
     entryId,
     eventId,
-    maxResults = TRANSFER_PREDICTION.MAX_RESULTS,
+    maxResults = DIVERSITY.MAX_RESULTS,
   } = params;
 
   const squad = await loadSquadState({ leagueId, entryId, eventId });
@@ -94,23 +98,33 @@ export async function predictTransfersForEntry(
     }
 
     out.sort((a, b) => b.rawScore - a.rawScore);
-    const top = out.slice(0, maxResults).map((o) => o.pred);
-    const scores = top.map((p) => p.score);
-    const probs = softmaxProbabilities(
-      scores,
-      TRANSFER_PREDICTION.SOFTMAX_TEMPERATURE
-    );
-    top.forEach((p, i) => {
-      p.probability = probs[i];
-    });
-    return top;
+    return out.slice(0, TRANSFER_PREDICTION.MAX_RESULTS).map((o) => o.pred);
   }
 
-  let predictions = filterCandidates(TRANSFER_PREDICTION.MIN_BUY_SCORE);
-  if (predictions.length === 0) {
+  let sorted = filterCandidates(TRANSFER_PREDICTION.MIN_BUY_SCORE);
+  if (sorted.length === 0) {
     const relaxedBuy = Math.floor(TRANSFER_PREDICTION.MIN_BUY_SCORE / 2);
-    predictions = filterCandidates(relaxedBuy);
+    sorted = filterCandidates(relaxedBuy);
   }
 
-  return { predictions };
+  const { selected, dropped } = diversifyPredictions({
+    predictions: sorted,
+    maxResults,
+    maxPerInPlayer: DIVERSITY.MAX_PER_IN_PLAYER,
+    maxPerOutPlayer: DIVERSITY.MAX_PER_OUT_PLAYER,
+  });
+
+  const scores = selected.map((p) => p.score);
+  const probs = softmaxProbabilities(
+    scores,
+    TRANSFER_PREDICTION.SOFTMAX_TEMPERATURE
+  );
+  selected.forEach((p, i) => {
+    p.probability = probs[i];
+  });
+
+  return {
+    predictions: selected,
+    ...(dropped > 0 && { meta: { droppedForDiversity: dropped } }),
+  };
 }

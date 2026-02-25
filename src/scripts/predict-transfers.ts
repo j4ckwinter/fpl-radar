@@ -65,12 +65,23 @@ async function main() {
   const eventIdEnv = getEventIdOptional();
   const eventId = eventIdEnv ?? (await resolveEventIdFromDb());
 
-  const { predictions } = await predictTransfersForEntry({
+  const { predictions, meta } = await predictTransfersForEntry({
     leagueId,
     entryId,
     eventId,
     maxResults: 20,
   });
+
+  const dropped = meta?.droppedForDiversity ?? 0;
+  const totalBeforeDiversity = predictions.length + dropped;
+
+  console.log("Transfer predictions (top 20)");
+  console.log("  entryId:", entryId, " eventId:", eventId);
+  console.log("  diversity: total before =", totalBeforeDiversity, " dropped =", dropped, " returned =", predictions.length);
+  const uniqueIns = new Set(predictions.map((p) => p.inPlayerId)).size;
+  const uniqueOuts = new Set(predictions.map((p) => p.outPlayerId)).size;
+  console.log("  unique IN players:", uniqueIns, " unique OUT players:", uniqueOuts);
+  console.log("");
 
   const playerIds = [
     ...new Set(
@@ -85,10 +96,6 @@ async function main() {
         })
       : [];
   const webNameById = new Map(players.map((p) => [p.id, p.webName]));
-
-  console.log("Transfer predictions (top 20)");
-  console.log("  entryId:", entryId, " eventId:", eventId);
-  console.log("");
   for (const p of predictions) {
     const outName = webNameById.get(p.outPlayerId) ?? `#${p.outPlayerId}`;
     const inName = webNameById.get(p.inPlayerId) ?? `#${p.inPlayerId}`;
