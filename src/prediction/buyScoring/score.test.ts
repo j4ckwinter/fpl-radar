@@ -17,6 +17,9 @@ vi.mock("../leagueOwnership/compute", () => ({
     ownershipByPlayerId: new Map(),
   }),
 }));
+vi.mock("../momentum/p95", () => ({
+  loadMomentumP95: vi.fn().mockResolvedValue({ inP95: 100, outP95: 100 }),
+}));
 
 import { getLeagueOwnership } from "../leagueOwnership/compute";
 import { loadBuyContext } from "./context";
@@ -39,6 +42,7 @@ function poolPlayer(
     news: string | null;
     selectedByPercent: number | null;
     webName: string;
+    transfersInEvent: number;
   }> = {}
 ) {
   return {
@@ -50,6 +54,7 @@ function poolPlayer(
     news: null,
     selectedByPercent: 10,
     webName: "Player",
+    transfersInEvent: 0,
     ...overrides,
   };
 }
@@ -69,6 +74,7 @@ describe("scoreBuyCandidates", () => {
     expect(loadBuyContext).toHaveBeenCalledWith({ leagueId, entryId, eventId });
     expect(loadBuyPool).toHaveBeenCalledWith({
       ownedPlayerIds: expect.any(Set),
+      limit: 100,
     });
   });
 
@@ -82,9 +88,9 @@ describe("scoreBuyCandidates", () => {
 
   it("returns scores sorted by buyScore descending", async () => {
     vi.mocked(loadBuyPool).mockResolvedValue([
-      poolPlayer(1, { selectedByPercent: 5 }),
-      poolPlayer(2, { selectedByPercent: 30 }),
-      poolPlayer(3, { selectedByPercent: 15 }),
+      poolPlayer(1, { transfersInEvent: 10 }),
+      poolPlayer(2, { transfersInEvent: 80 }),
+      poolPlayer(3, { transfersInEvent: 40 }),
     ]);
 
     const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
@@ -99,20 +105,32 @@ describe("scoreBuyCandidates", () => {
     );
   });
 
-  it("applies base score and ownership bonus from selectedByPercent", async () => {
+  it("safe riskProfile ranks higher league ownership higher (equal other metrics)", async () => {
     vi.mocked(loadBuyPool).mockResolvedValue([
-      poolPlayer(1, { selectedByPercent: 0 }),
-      poolPlayer(2, { selectedByPercent: 60 }),
+      poolPlayer(1, { transfersInEvent: 20 }),
+      poolPlayer(2, { transfersInEvent: 20 }),
     ]);
+    vi.mocked(getLeagueOwnership).mockResolvedValueOnce({
+      leagueId: 1,
+      eventId: 5,
+      totalEntries: 10,
+      ownershipByPlayerId: new Map([
+        [1, 0.2],
+        [2, 0.8],
+      ]),
+    });
 
-    const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
+    const result = await scoreBuyCandidates({
+      leagueId,
+      entryId,
+      eventId,
+      riskProfile: "safe",
+    });
 
-    const lowOwnership = result.scores.find((s) => s.playerId === 1);
-    const highOwnership = result.scores.find((s) => s.playerId === 2);
-    expect(lowOwnership!.buyScore).toBeLessThan(highOwnership!.buyScore);
-    expect(highOwnership!.features.selectedByPercent).toBe(60);
-    expect(lowOwnership!.reasons).not.toContain("High ownership / template target");
-    expect(highOwnership!.reasons).toContain("High ownership / template target");
+    const lowLeague = result.scores.find((s) => s.playerId === 1);
+    const highLeague = result.scores.find((s) => s.playerId === 2);
+    expect(highLeague!.buyScore).toBeGreaterThan(lowLeague!.buyScore);
+    expect(highLeague!.reasons).toContain("Highly owned in your league");
   });
 
   it("adds Available to play reason and bonus when status is available", async () => {
@@ -148,7 +166,7 @@ describe("scoreBuyCandidates", () => {
     expect(unavailable!.buyScore).toBeLessThan(available!.buyScore);
   });
 
-  it("applies hasNews penalty and reason when news is non-empty", async () => {
+  it("applies hasNews reason when news is non-empty", async () => {
     vi.mocked(loadBuyPool).mockResolvedValue([
       poolPlayer(1, { news: null }),
       poolPlayer(2, { news: "Injured" }),
@@ -156,34 +174,14 @@ describe("scoreBuyCandidates", () => {
 
     const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
 
-    const noNews = result.scores.find((s) => s.playerId === 1);
     const withNews = result.scores.find((s) => s.playerId === 2);
     expect(withNews!.features.hasNews).toBe(true);
     expect(withNews!.reasons).toContain("News present");
-    expect(withNews!.buyScore).toBeLessThan(noNews!.buyScore);
-  });
-
-  it("applies very high price penalty when nowCost >= threshold", async () => {
-    vi.mocked(loadBuyPool).mockResolvedValue([
-      poolPlayer(1, { nowCost: 100 }),
-      poolPlayer(2, { nowCost: 120 }),
-    ]);
-
-    const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
-
-    const premium = result.scores.find((s) => s.playerId === 2);
-    expect(premium!.reasons).toContain("Very high price");
-    expect(premium!.features.nowCost).toBe(120);
   });
 
   it("clamps buyScore to 0-100", async () => {
     vi.mocked(loadBuyPool).mockResolvedValue([
-      poolPlayer(1, {
-        status: "u",
-        selectedByPercent: 0,
-        news: "Bad",
-        nowCost: 150,
-      }),
+      poolPlayer(1, { status: "u", transfersInEvent: 0 }),
     ]);
 
     const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
@@ -217,6 +215,7 @@ describe("scoreBuyCandidates", () => {
         nowCost: 85,
         positionId: 3,
         teamId: 2,
+        transfersInEvent: 50,
       }),
     ]);
 
@@ -233,9 +232,11 @@ describe("scoreBuyCandidates", () => {
         nowCost: 85,
         positionId: 3,
         teamId: 2,
+        transfersInEvent: 50,
+        momentumIn: expect.any(Number),
         upcomingFixtureScore: null,
-        leagueOwnershipPct: 0,
-        nonOwnershipRisk: 0,
+        leagueOwnershipPct: null,
+        nonOwnershipRisk: null,
       },
     });
   });
@@ -259,10 +260,38 @@ describe("scoreBuyCandidates", () => {
     expect(result.scores[0].features.nonOwnershipRisk).toBeCloseTo(8 / 12);
   });
 
-  it("buy score increases with higher league ownership", async () => {
+  it("risky riskProfile prefers differential (lower league ownership ranks higher)", async () => {
     vi.mocked(loadBuyPool).mockResolvedValue([
-      poolPlayer(1, { status: "a", selectedByPercent: 15, nowCost: 50 }),
-      poolPlayer(2, { status: "a", selectedByPercent: 15, nowCost: 50 }),
+      poolPlayer(1, { status: "a", transfersInEvent: 10 }),
+      poolPlayer(2, { status: "a", transfersInEvent: 10 }),
+    ]);
+    vi.mocked(getLeagueOwnership).mockResolvedValueOnce({
+      leagueId: 1,
+      eventId: 5,
+      totalEntries: 10,
+      ownershipByPlayerId: new Map([
+        [1, 0.8],
+        [2, 0.1],
+      ]),
+    });
+
+    const result = await scoreBuyCandidates({
+      leagueId,
+      entryId,
+      eventId,
+      riskProfile: "risky",
+    });
+
+    const highOwn = result.scores.find((s) => s.playerId === 1);
+    const lowOwn = result.scores.find((s) => s.playerId === 2);
+    expect(lowOwn!.buyScore).toBeGreaterThan(highOwn!.buyScore);
+    expect(lowOwn!.reasons).toContain("Strong differential in your league");
+  });
+
+  it("balanced riskProfile: higher league ownership gives higher buy score", async () => {
+    vi.mocked(loadBuyPool).mockResolvedValue([
+      poolPlayer(1, { status: "a", transfersInEvent: 10 }),
+      poolPlayer(2, { status: "a", transfersInEvent: 10 }),
     ]);
     vi.mocked(getLeagueOwnership).mockResolvedValueOnce({
       leagueId: 1,
@@ -297,8 +326,8 @@ describe("scoreBuyCandidates", () => {
     const result = await scoreBuyCandidates({ leagueId, entryId, eventId });
 
     expect(result.scores).toHaveLength(1);
-    expect(result.scores[0].features.leagueOwnershipPct).toBe(0);
-    expect(result.scores[0].features.nonOwnershipRisk).toBe(0);
+    expect(result.scores[0].features.leagueOwnershipPct).toBeNull();
+    expect(result.scores[0].features.nonOwnershipRisk).toBeNull();
   });
 
   it("throws SquadNotFoundError when loadBuyContext throws", async () => {

@@ -45,6 +45,8 @@ model FplPlayer {
   status            String
   news              String?
   selectedByPercent Float?
+  transfersInEvent  Int                @default(0)
+  transfersOutEvent Int                @default(0)
   updatedAt         DateTime           @updatedAt
   team              FplTeam            @relation(fields: [teamId], references: [id])
   position          FplPosition        @relation(fields: [positionId], references: [id])

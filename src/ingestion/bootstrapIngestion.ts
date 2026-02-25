@@ -95,6 +95,8 @@ export async function ingestBootstrapStatic(opts: {
     }
 
     for (const el of data.elements) {
+      const transfersInEvent = el.transfers_in_event ?? 0;
+      const transfersOutEvent = el.transfers_out_event ?? 0;
       await tx.fplPlayer.upsert({
         where: { id: el.id },
         create: {
@@ -108,6 +110,8 @@ export async function ingestBootstrapStatic(opts: {
           status: el.status,
           news: el.news === "" ? null : el.news,
           selectedByPercent: parseSelectedByPercent(el.selected_by_percent),
+          transfersInEvent,
+          transfersOutEvent,
           updatedAt: now,
         },
         update: {
@@ -120,6 +124,8 @@ export async function ingestBootstrapStatic(opts: {
           status: el.status,
           news: el.news === "" ? null : el.news,
           selectedByPercent: parseSelectedByPercent(el.selected_by_percent),
+          transfersInEvent,
+          transfersOutEvent,
           updatedAt: now,
         },
       });

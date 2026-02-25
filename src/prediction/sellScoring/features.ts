@@ -16,6 +16,7 @@ export function extractSellFeatures(
     const selectedByPercent = player?.selectedByPercent ?? null;
     const nowCost = player?.nowCost ?? 0;
     const teamId = player?.teamId ?? 0;
+    const transfersOutEvent = player?.transfersOutEvent ?? 0;
 
     const hasNews = news !== null && news.trim().length > 0;
     const isFlagged =
@@ -35,7 +36,10 @@ export function extractSellFeatures(
       isBenched: pick.pickPosition > 11,
       isCaptainOrVice: pick.isCaptain || pick.isViceCaptain,
       nowCost,
+      transfersOutEvent,
+      momentumOut: 0, // set by score.ts after p95
       upcomingFixtureScore,
+      leagueOwnershipPct: null, // set by score.ts
     });
   }
 

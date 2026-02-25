@@ -8,6 +8,7 @@ vi.mock("../sellScoring", () => ({
 }));
 vi.mock("../buyScoring", () => ({
   scoreBuyCandidates: vi.fn(),
+  loadBuyPool: vi.fn(),
 }));
 vi.mock("../candidateGenerator", () => ({
   generateSingleTransferCandidates: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock("../candidateGenerator", () => ({
 
 import { loadSquadState } from "../squadLoader";
 import { scoreSellCandidates } from "../sellScoring";
-import { scoreBuyCandidates } from "../buyScoring";
+import { scoreBuyCandidates, loadBuyPool } from "../buyScoring";
 import { generateSingleTransferCandidates } from "../candidateGenerator";
 import { predictTransfersForEntry } from "./predict";
 import { TRANSFER_PREDICTION } from "./constants";
@@ -43,7 +44,18 @@ function sellScore(playerId: number, sellScore: number, reasons: string[] = []) 
     playerId,
     sellScore,
     reasons,
-    features: { isFlagged: false, status: "a", hasNews: false, selectedByPercent: 10, isBenched: false, isCaptainOrVice: false, nowCost: 50 },
+    features: {
+      isFlagged: false,
+      status: "a",
+      hasNews: false,
+      selectedByPercent: 10,
+      isBenched: false,
+      isCaptainOrVice: false,
+      nowCost: 50,
+      momentumOut: 0,
+      leagueOwnershipPct: null as number | null,
+      upcomingFixtureScore: null as number | null,
+    },
   };
 }
 
@@ -90,16 +102,20 @@ function candidate(
 describe("predictTransfersForEntry", () => {
   beforeEach(() => {
     vi.mocked(loadSquadState).mockResolvedValue(squadState() as never);
+    vi.mocked(loadBuyPool).mockResolvedValue([
+      { id: 2 } as never,
+      { id: 3 } as never,
+    ]);
     vi.mocked(scoreSellCandidates).mockResolvedValue({
       scores: [
-        sellScore(1, 20, ["Sell reason 1"]),
-        sellScore(2, 25, ["Sell reason 2"]),
+        sellScore(1, 50, ["Sell reason 1"]),
+        sellScore(2, 55, ["Sell reason 2"]),
       ],
     } as never);
     vi.mocked(scoreBuyCandidates).mockResolvedValue({
       scores: [
-        buyScore(2, 20, ["Buy reason 1"]),
-        buyScore(3, 25, ["Buy reason 2"]),
+        buyScore(2, 50, ["Buy reason 1"]),
+        buyScore(3, 55, ["Buy reason 2"]),
       ],
     } as never);
     vi.mocked(generateSingleTransferCandidates).mockResolvedValue({
@@ -120,25 +136,37 @@ describe("predictTransfersForEntry", () => {
   it("calls scoreSellCandidates and scoreBuyCandidates with leagueId, entryId, eventId", async () => {
     await predictTransfersForEntry({ leagueId, entryId, eventId });
 
-    expect(scoreSellCandidates).toHaveBeenCalledWith({ leagueId, entryId, eventId });
+    expect(scoreSellCandidates).toHaveBeenCalledWith({
+      leagueId,
+      entryId,
+      eventId,
+      riskProfile: undefined,
+    });
     expect(scoreBuyCandidates).toHaveBeenCalledWith({
       leagueId,
       entryId,
       eventId,
-      limit: 200,
+      limit: 2000,
+      riskProfile: undefined,
     });
   });
 
-  it("calls generateSingleTransferCandidates with squad and maxCandidates 2000", async () => {
+  it("calls generateSingleTransferCandidates with squad, maxCandidates and allowedInPlayerIds from buy pool", async () => {
     const squad = squadState();
     vi.mocked(loadSquadState).mockResolvedValue(squad as never);
 
     await predictTransfersForEntry({ leagueId, entryId, eventId });
 
-    expect(generateSingleTransferCandidates).toHaveBeenCalledWith({
-      squad,
-      maxCandidates: 2000,
-    });
+    expect(generateSingleTransferCandidates).toHaveBeenCalledWith(
+      expect.objectContaining({
+        squad,
+        maxCandidates: 2000,
+      })
+    );
+    const call = vi.mocked(generateSingleTransferCandidates).mock.calls[0][0];
+    expect(call.allowedInPlayerIds).toBeInstanceOf(Set);
+    expect(call.allowedInPlayerIds!.has(2)).toBe(true);
+    expect(call.allowedInPlayerIds!.has(3)).toBe(true);
   });
 
   it("returns predictions with score, probability, reasons, and features", async () => {
@@ -151,22 +179,26 @@ describe("predictTransfersForEntry", () => {
 
     expect(predictions.length).toBeGreaterThan(0);
     for (const p of predictions) {
-      expect(p).toHaveProperty("outPlayerId");
-      expect(p).toHaveProperty("inPlayerId");
       expect(p.score).toBeGreaterThanOrEqual(0);
       expect(p.score).toBeLessThanOrEqual(100);
       expect(p.probability).toBeGreaterThanOrEqual(0);
       expect(p.probability).toBeLessThanOrEqual(1);
       expect(Array.isArray(p.reasons)).toBe(true);
-      expect(p.features).toMatchObject({
-        sellScore: expect.any(Number),
-        buyScore: expect.any(Number),
-        estimatedCostDelta: expect.any(Number),
-        resultingBank: expect.anything(),
-        budgetOk: expect.any(Boolean),
-        teamLimitOk: expect.any(Boolean),
-        positionOk: expect.any(Boolean),
-      });
+      if (p.type === "NO_TRANSFER") {
+        expect(p.type).toBe("NO_TRANSFER");
+      } else {
+        expect(p).toHaveProperty("outPlayerId");
+        expect(p).toHaveProperty("inPlayerId");
+        expect(p.features).toMatchObject({
+          sellScore: expect.any(Number),
+          buyScore: expect.any(Number),
+          estimatedCostDelta: expect.any(Number),
+          resultingBank: expect.anything(),
+          budgetOk: expect.any(Boolean),
+          teamLimitOk: expect.any(Boolean),
+          positionOk: expect.any(Boolean),
+        });
+      }
     }
   });
 
@@ -178,7 +210,10 @@ describe("predictTransfersForEntry", () => {
       maxResults: 10,
     });
 
-    const sum = predictions.reduce((s, p) => s + p.probability, 0);
+    const sum = predictions.reduce(
+      (s, p) => s + p.probability,
+      0
+    );
     expect(sum).toBeCloseTo(1, 10);
   });
 
@@ -190,7 +225,8 @@ describe("predictTransfersForEntry", () => {
       maxResults: 2,
     });
 
-    expect(predictions).toHaveLength(2);
+    expect(predictions.length).toBeLessThanOrEqual(2);
+    expect(predictions.length).toBeGreaterThanOrEqual(1);
   });
 
   it("uses default maxResults when not provided", async () => {
@@ -203,11 +239,11 @@ describe("predictTransfersForEntry", () => {
     expect(predictions.length).toBeLessThanOrEqual(TRANSFER_PREDICTION.MAX_RESULTS);
   });
 
-  it("filters out candidates below MIN_SELL_SCORE", async () => {
+  it("when all sell scores below MIN_SELL_SCORE, uses relaxed sell threshold and returns predictions", async () => {
     vi.mocked(scoreSellCandidates).mockResolvedValue({
       scores: [
         sellScore(1, 5, []),
-        sellScore(2, 10, []),
+        sellScore(2, 5, []),
       ],
     } as never);
     vi.mocked(scoreBuyCandidates).mockResolvedValue({
@@ -223,7 +259,12 @@ describe("predictTransfersForEntry", () => {
       eventId,
     });
 
-    expect(predictions).toHaveLength(0);
+    expect(predictions.length).toBeGreaterThan(0);
+    const transfers = predictions.filter(
+      (p): p is import("./types").TransferPrediction => "outPlayerId" in p
+    );
+    expect(transfers.length).toBeGreaterThan(0);
+    expect(transfers.every((p) => p.features.sellScore < TRANSFER_PREDICTION.MIN_SELL_SCORE)).toBe(true);
   });
 
   it("filters out candidates below MIN_BUY_SCORE", async () => {
@@ -231,7 +272,7 @@ describe("predictTransfersForEntry", () => {
       scores: [sellScore(1, 50), sellScore(2, 50)],
     } as never);
     vi.mocked(scoreBuyCandidates).mockResolvedValue({
-      scores: [buyScore(2, 5), buyScore(3, 5)],
+      scores: [buyScore(2, 2), buyScore(3, 2)],
     } as never);
     vi.mocked(generateSingleTransferCandidates).mockResolvedValue({
       candidates: [candidate(1, 2), candidate(1, 3)],
@@ -251,7 +292,7 @@ describe("predictTransfersForEntry", () => {
       scores: [sellScore(1, 50), sellScore(2, 50)],
     } as never);
     vi.mocked(scoreBuyCandidates).mockResolvedValue({
-      scores: [buyScore(2, 10), buyScore(3, 10)],
+      scores: [buyScore(2, 6), buyScore(3, 6)],
     } as never);
     vi.mocked(generateSingleTransferCandidates).mockResolvedValue({
       candidates: [candidate(1, 2), candidate(1, 3)],
@@ -264,7 +305,7 @@ describe("predictTransfersForEntry", () => {
     });
 
     const relaxedBuy = Math.floor(TRANSFER_PREDICTION.MIN_BUY_SCORE / 2);
-    expect(relaxedBuy).toBe(7);
+    expect(relaxedBuy).toBe(5);
     expect(predictions.length).toBeGreaterThan(0);
   });
 

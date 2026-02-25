@@ -18,6 +18,7 @@ export interface BuyPoolPlayer {
   news: string | null;
   selectedByPercent: number | null;
   webName: string;
+  transfersInEvent: number;
 }
 
 export interface LoadBuyPoolParams {
@@ -30,6 +31,7 @@ export interface ScoreBuyCandidatesParams {
   entryId: number;
   eventId: number;
   limit?: number;
+  riskProfile?: "safe" | "balanced" | "risky";
 }
 
 export interface BuyCandidateScore {
@@ -44,6 +46,8 @@ export interface BuyCandidateScore {
     nowCost: number;
     positionId: number;
     teamId: number;
+    transfersInEvent: number;
+    momentumIn: number; // 0..1
     upcomingFixtureScore: number | null;
     /** Fraction of league entries (with snapshot) that own this player, 0..1. */
     leagueOwnershipPct: number | null;

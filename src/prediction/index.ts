@@ -23,7 +23,15 @@ export { scoreSellCandidates, type ScoreSellCandidatesParams } from "./sellScori
 export type { SellCandidateScore } from "./sellScoring";
 export { scoreBuyCandidates, type ScoreBuyCandidatesParams } from "./buyScoring";
 export type { BuyCandidateScore } from "./buyScoring";
-export { predictTransfersForEntry, type PredictTransfersForEntryParams } from "./transferPrediction";
-export type { TransferPrediction } from "./transferPrediction";
+export {
+  predictTransfersForEntry,
+  isTransferPrediction,
+  type PredictTransfersForEntryParams,
+} from "./transferPrediction";
+export type {
+  TransferPrediction,
+  NoTransferPrediction,
+  EntryPrediction,
+} from "./transferPrediction";
 export { SquadNotFoundError, InvalidSquadError } from "./errors";
 export type { SquadState, TransferCandidate } from "./types";

@@ -9,7 +9,7 @@ import type { BuyPoolPlayer, LoadBuyPoolParams } from "./types";
 export async function loadBuyPool(
   params: LoadBuyPoolParams
 ): Promise<BuyPoolPlayer[]> {
-  const { ownedPlayerIds, limit = BUY_SCORE.TOP_POOL_LIMIT } = params;
+  const { ownedPlayerIds, limit = BUY_SCORE.MOMENTUM_POOL_LIMIT } = params;
 
   const excludeIds = ownedPlayerIds.size > 0 ? [...ownedPlayerIds] : [];
 
@@ -18,7 +18,7 @@ export async function loadBuyPool(
       excludeIds.length > 0
         ? { id: { notIn: excludeIds } }
         : undefined,
-    orderBy: { selectedByPercent: "desc" },
+    orderBy: { transfersInEvent: "desc" },
     take: limit,
     select: {
       id: true,
@@ -29,6 +29,7 @@ export async function loadBuyPool(
       news: true,
       selectedByPercent: true,
       webName: true,
+      transfersInEvent: true,
     },
   });
 

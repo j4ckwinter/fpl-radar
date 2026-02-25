@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { prisma } from "../lib/prisma";
 import { predictTransfersForEntry } from "../prediction";
+import { parseRiskProfile } from "../prediction/riskProfile";
 
 function getLeagueId(): number {
   const raw = process.env.FPL_LEAGUE_ID;
@@ -65,11 +66,13 @@ async function main() {
   const eventIdEnv = getEventIdOptional();
   const eventId = eventIdEnv ?? (await resolveEventIdFromDb());
 
+  const riskProfile = parseRiskProfile(process.env.FPL_RISK_PROFILE);
   const { predictions, meta } = await predictTransfersForEntry({
     leagueId,
     entryId,
     eventId,
     maxResults: 20,
+    riskProfile,
   });
 
   const dropped = meta?.droppedForDiversity ?? 0;

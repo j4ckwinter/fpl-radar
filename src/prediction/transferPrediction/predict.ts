@@ -1,16 +1,34 @@
 import { loadSquadState } from "../squadLoader";
 import { generateSingleTransferCandidates } from "../candidateGenerator";
 import { scoreSellCandidates } from "../sellScoring";
-import { scoreBuyCandidates } from "../buyScoring";
-import { DIVERSITY, TRANSFER_PREDICTION } from "./constants";
+import { scoreBuyCandidates, loadBuyPool } from "../buyScoring";
+import {
+  DIVERSITY,
+  TRANSFER_PREDICTION,
+  PREDICTION_BUY_POOL_LIMIT,
+  SAFE_PROFILE_HIGH_OWNERSHIP_PENALTY,
+  SAFE_PROFILE_HIGH_OWNERSHIP_THRESHOLD,
+  SAFE_PROFILE_CONSENSUS_SELL_MOMENTUM_THRESHOLD,
+  NO_TRANSFER_REASONS,
+  NO_TRANSFER_SCORE_THRESHOLD,
+  WEAK_LINK_PENALTY,
+  WEAK_LINK_THRESHOLD,
+  SAFE_PROFILE_DIFFICULT_FIXTURES_THRESHOLD,
+  SCORE_MAX,
+} from "./constants";
 import { diversifyPredictions } from "./diversify";
+import { normaliseFixtureScore } from "../buyScoring/score.utils";
 import { clampScore, buildReasons, softmaxProbabilities } from "./predict.utils";
-import type { PredictTransfersForEntryParams, TransferPrediction } from "./types";
+import type {
+  PredictTransfersForEntryParams,
+  TransferPrediction,
+  NoTransferPrediction,
+} from "./types";
 
 export async function predictTransfersForEntry(
   params: PredictTransfersForEntryParams
 ): Promise<{
-  predictions: TransferPrediction[];
+  predictions: (TransferPrediction | NoTransferPrediction)[];
   meta?: { droppedForDiversity: number };
 }> {
   const {
@@ -18,16 +36,30 @@ export async function predictTransfersForEntry(
     entryId,
     eventId,
     maxResults = DIVERSITY.MAX_RESULTS,
+    riskProfile,
   } = params;
 
   const squad = await loadSquadState({ leagueId, entryId, eventId });
+  const ownedPlayerIds = new Set(squad.players.map((p) => p.playerId));
+  const buyPool = await loadBuyPool({
+    ownedPlayerIds,
+    limit: PREDICTION_BUY_POOL_LIMIT,
+  });
+  const allowedInPlayerIds = new Set(buyPool.map((p) => p.id));
 
   const [sellResult, buyResult, candidatesResult] = await Promise.all([
-    scoreSellCandidates({ leagueId, entryId, eventId }),
-    scoreBuyCandidates({ leagueId, entryId, eventId, limit: 200 }),
+    scoreSellCandidates({ leagueId, entryId, eventId, riskProfile }),
+    scoreBuyCandidates({
+      leagueId,
+      entryId,
+      eventId,
+      limit: PREDICTION_BUY_POOL_LIMIT,
+      riskProfile,
+    }),
     generateSingleTransferCandidates({
       squad,
       maxCandidates: 2000,
+      allowedInPlayerIds,
     }),
   ]);
 
@@ -41,7 +73,10 @@ export async function predictTransfersForEntry(
   const candidates = candidatesResult.candidates;
   const bank = squad.bank;
 
-  function filterCandidates(minBuyScore: number): TransferPrediction[] {
+  function filterCandidates(
+    minBuyScore: number,
+    minSellScore: number = TRANSFER_PREDICTION.MIN_SELL_SCORE
+  ): TransferPrediction[] {
     const out: Array<{
       pred: TransferPrediction;
       rawScore: number;
@@ -51,7 +86,7 @@ export async function predictTransfersForEntry(
       const sellScore = sellByPlayerId.get(c.outPlayerId)?.sellScore ?? 0;
       const buyScore = buyByPlayerId.get(c.inPlayerId)?.buyScore ?? 0;
 
-      if (sellScore < TRANSFER_PREDICTION.MIN_SELL_SCORE) continue;
+      if (sellScore < minSellScore) continue;
       if (buyScore < minBuyScore) continue;
       if (!c.checks.budgetOk && bank !== null) continue;
       if (!c.checks.teamLimitOk) continue;
@@ -66,6 +101,39 @@ export async function predictTransfersForEntry(
         TRANSFER_PREDICTION.W_BUY * buyScore;
       if (bankUnknown) rawScore -= TRANSFER_PREDICTION.BUDGET_UNKNOWN_PENALTY;
       if (bigSpend) rawScore -= TRANSFER_PREDICTION.BIG_SPEND_PENALTY;
+
+      const weakLink = Math.min(sellScore, buyScore);
+      if (weakLink < WEAK_LINK_THRESHOLD) {
+        rawScore -= WEAK_LINK_PENALTY;
+      }
+
+      if (riskProfile === "safe") {
+        const outFeatures = sellByPlayerId.get(c.outPlayerId)?.features;
+        const outLeagueOwnership = outFeatures?.leagueOwnershipPct ?? null;
+        const outMomentum = outFeatures?.momentumOut ?? 0;
+        const isWidelyCopiedSell =
+          outMomentum >= SAFE_PROFILE_CONSENSUS_SELL_MOMENTUM_THRESHOLD;
+        const fixtureGood01 = normaliseFixtureScore(
+          outFeatures?.upcomingFixtureScore ?? null
+        );
+        const fixtureBad01 = 1 - fixtureGood01;
+        const difficultFixtures =
+          fixtureBad01 >= SAFE_PROFILE_DIFFICULT_FIXTURES_THRESHOLD;
+        const isFlagged = outFeatures?.isFlagged ?? false;
+        const isUnavailable = outFeatures?.status === "u";
+        const strongSellSignal =
+          isWidelyCopiedSell ||
+          difficultFixtures ||
+          isFlagged ||
+          isUnavailable;
+        if (
+          outLeagueOwnership !== null &&
+          outLeagueOwnership >= SAFE_PROFILE_HIGH_OWNERSHIP_THRESHOLD &&
+          !strongSellSignal
+        ) {
+          rawScore -= SAFE_PROFILE_HIGH_OWNERSHIP_PENALTY;
+        }
+      }
 
       const sellReasons = sellByPlayerId.get(c.outPlayerId)?.reasons ?? [];
       const buyReasons = buyByPlayerId.get(c.inPlayerId)?.reasons ?? [];
@@ -101,30 +169,69 @@ export async function predictTransfersForEntry(
     return out.slice(0, TRANSFER_PREDICTION.MAX_RESULTS).map((o) => o.pred);
   }
 
-  let sorted = filterCandidates(TRANSFER_PREDICTION.MIN_BUY_SCORE);
-  if (sorted.length === 0) {
-    const relaxedBuy = Math.floor(TRANSFER_PREDICTION.MIN_BUY_SCORE / 2);
-    sorted = filterCandidates(relaxedBuy);
+  let sorted = filterCandidates(
+    TRANSFER_PREDICTION.MIN_BUY_SCORE,
+    TRANSFER_PREDICTION.MIN_SELL_SCORE
+  );
+  if (sorted.length === 0 && candidates.length > 0) {
+    sorted = filterCandidates(
+      TRANSFER_PREDICTION.MIN_BUY_SCORE,
+      0
+    );
   }
+  if (sorted.length === 0 && candidates.length > 0) {
+    sorted = filterCandidates(
+      Math.floor(TRANSFER_PREDICTION.MIN_BUY_SCORE / 2),
+      0
+    );
+  }
+
+  const topScore = sorted.length > 0 ? sorted[0].score : 0;
+  const willAddNoTransfer = buildNoTransferIfNeeded(null, topScore) !== null;
+  const diversityLimit = willAddNoTransfer ? Math.max(1, maxResults - 1) : maxResults;
 
   const { selected, dropped } = diversifyPredictions({
     predictions: sorted,
-    maxResults,
+    maxResults: diversityLimit,
     maxPerInPlayer: DIVERSITY.MAX_PER_IN_PLAYER,
     maxPerOutPlayer: DIVERSITY.MAX_PER_OUT_PLAYER,
   });
 
-  const scores = selected.map((p) => p.score);
+  const noTransfer = buildNoTransferIfNeeded(selected, topScore);
+
+  const fullList: (TransferPrediction | NoTransferPrediction)[] = noTransfer
+    ? [noTransfer, ...selected]
+    : [...selected];
+
+  const scores = fullList.map((p) => p.score);
   const probs = softmaxProbabilities(
     scores,
     TRANSFER_PREDICTION.SOFTMAX_TEMPERATURE
   );
-  selected.forEach((p, i) => {
+  fullList.forEach((p, i) => {
     p.probability = probs[i];
   });
 
   return {
-    predictions: selected,
+    predictions: fullList,
     ...(dropped > 0 && { meta: { droppedForDiversity: dropped } }),
+  };
+}
+
+function buildNoTransferIfNeeded(
+  selected: TransferPrediction[] | null,
+  topScore: number
+): NoTransferPrediction | null {
+  if (selected !== null && selected.length === 0) return null;
+  if (topScore >= NO_TRANSFER_SCORE_THRESHOLD) return null;
+
+  const reasons: string[] = [NO_TRANSFER_REASONS.LOW_TOP_SCORE];
+  const noTransferScore = Math.min(topScore + 5, SCORE_MAX);
+
+  return {
+    type: "NO_TRANSFER",
+    score: noTransferScore,
+    probability: 0,
+    reasons,
   };
 }

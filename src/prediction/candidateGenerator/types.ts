@@ -4,6 +4,8 @@ export interface GenerateSingleTransferCandidatesParams {
   squad: SquadState;
   maxCandidates?: number;
   perPositionInPoolLimit?: number;
+  /** When set, IN pool is restricted to these IDs (e.g. buy-scored pool for prediction). */
+  allowedInPlayerIds?: Set<number>;
 }
 
 export interface PlayerRow {

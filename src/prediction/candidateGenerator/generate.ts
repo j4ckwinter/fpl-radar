@@ -33,6 +33,7 @@ export async function generateSingleTransferCandidates(
     squad,
     maxCandidates = DEFAULT_MAX_CANDIDATES,
     perPositionInPoolLimit = DEFAULT_IN_POOL_PER_POSITION,
+    allowedInPlayerIds,
   } = params;
 
   const ownedPlayerIds = new Set(squad.players.map((p) => p.playerId));
@@ -42,6 +43,7 @@ export async function generateSingleTransferCandidates(
     ownedPlayerIds,
     positionIds,
     perPositionLimit: perPositionInPoolLimit,
+    allowedInPlayerIds,
   });
 
   const inPoolSizeByPosition: Record<number, number> = {};

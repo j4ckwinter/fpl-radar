@@ -20,6 +20,7 @@ export async function buildInPoolByPosition(
     ownedPlayerIds,
     positionIds,
     perPositionLimit = DEFAULT_IN_POOL_PER_POSITION,
+    allowedInPlayerIds,
   } = params;
 
   if (positionIds.length === 0) {
@@ -45,6 +46,7 @@ export async function buildInPoolByPosition(
 
   for (const p of rows) {
     if (ownedPlayerIds.has(p.id)) continue;
+    if (allowedInPlayerIds !== undefined && !allowedInPlayerIds.has(p.id)) continue;
     const player: InPoolPlayer = {
       playerId: p.id,
       teamId: p.teamId,

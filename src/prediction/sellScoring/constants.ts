@@ -1,12 +1,10 @@
 export const SELL_SCORE = {
-  BASE: 10,
-  FLAGGED: 50,
-  UNAVAILABLE_EXTRA: 20,
-  BENCHED: 0,
-  HAS_NEWS: 10,
-  CAPTAIN_OR_VICE_PENALTY: 30,
-  TEMPLATE_HOLD_PENALTY: 10,
-  TEMPLATE_THRESHOLD: 30,
+  BASE: 0,
+  W_MOMENTUM: 50,
+  W_FIXTURES: 35,
+  W_LEAGUE_OWNERSHIP: 15, // applied as a penalty in safe/balanced
+  FLAGGED_BONUS: 40,
+  UNAVAILABLE_BONUS: 60,
 } as const;
 
 /** Minimum sell score (inclusive). */
@@ -29,9 +27,11 @@ export const FLAGGED_STATUSES = ["i", "s", "u", "d"] as const;
 
 /** User-facing reason labels for sell scoring. */
 export const SELL_REASON = {
+  HIGH_MOMENTUM: "High transfers out this GW",
+  BAD_FIXTURES: "Difficult upcoming fixtures",
+  LEAGUE_WIDELY_OWNED: "Widely owned in your league (less urgency to sell)",
   FLAGGED: "Flagged / availability concern",
   UNAVAILABLE: "Unavailable",
-  BENCHED: "On the bench",
   CAPTAIN_OR_VICE: "Captain/vice captain",
   TEMPLATE_HOLD: "High-ownership template hold",
 } as const;

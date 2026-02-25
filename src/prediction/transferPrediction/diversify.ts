@@ -14,13 +14,10 @@ export interface DiversifyPredictionsResult {
 }
 
 /**
- * Greedy diversity filter: from score-ordered predictions, selects up to maxResults
- * while capping how often the same inPlayerId or outPlayerId appears.
+ * Diversity filter: score-respecting selection with caps.
+ * Iterates in score-desc order; selects only when IN/OUT caps allow.
+ * If too few results, relaxes caps and refills from remaining, then re-sorts by score.
  * Deterministic: same input → same output.
- *
- * If the first pass produces too few results (< maxResults / 2), a second pass
- * relaxes caps by +1 and refills from the remaining items so we don't return
- * very few results when the pool is small.
  */
 export function diversifyPredictions(
   params: DiversifyPredictionsParams
@@ -36,7 +33,7 @@ export function diversifyPredictions(
     return { selected: [], dropped: 0 };
   }
 
-  const selected = selectWithCaps(
+  let selected = selectWithCaps(
     predictions,
     maxResults,
     maxPerInPlayer,
@@ -45,22 +42,31 @@ export function diversifyPredictions(
 
   const minAcceptable = Math.floor(maxResults / 2);
   if (selected.length < minAcceptable && selected.length < predictions.length) {
+    const selectedSet = new Set(
+      selected.map((p) => `${p.outPlayerId}:${p.inPlayerId}`)
+    );
     const remaining = predictions.filter(
-      (p) =>
-        !selected.some(
-          (s) => s.outPlayerId === p.outPlayerId && s.inPlayerId === p.inPlayerId
-        )
+      (p) => !selectedSet.has(`${p.outPlayerId}:${p.inPlayerId}`)
     );
-    const relaxed = selectWithCaps(
-      remaining,
-      maxResults - selected.length,
-      maxPerInPlayer + 1,
-      maxPerOutPlayer + 1
-    );
-    for (const p of relaxed) {
-      if (selected.length >= maxResults) break;
-      selected.push(p);
+    const relaxedOut = maxPerOutPlayer + 1;
+    const relaxedIn = maxPerInPlayer + 1;
+    const outCount = new Map<number, number>();
+    const inCount = new Map<number, number>();
+    for (const p of selected) {
+      outCount.set(p.outPlayerId, (outCount.get(p.outPlayerId) ?? 0) + 1);
+      inCount.set(p.inPlayerId, (inCount.get(p.inPlayerId) ?? 0) + 1);
     }
+    for (const p of remaining) {
+      if (selected.length >= maxResults) break;
+      const outCur = outCount.get(p.outPlayerId) ?? 0;
+      const inCur = inCount.get(p.inPlayerId) ?? 0;
+      if (outCur < relaxedOut && inCur < relaxedIn) {
+        selected.push(p);
+        outCount.set(p.outPlayerId, outCur + 1);
+        inCount.set(p.inPlayerId, inCur + 1);
+      }
+    }
+    selected.sort((a, b) => b.score - a.score);
   }
 
   return {
@@ -69,6 +75,9 @@ export function diversifyPredictions(
   };
 }
 
+/**
+ * Greedy score-first selection: iterate in score-desc order, select when caps allow.
+ */
 function selectWithCaps(
   predictions: TransferPrediction[],
   maxResults: number,

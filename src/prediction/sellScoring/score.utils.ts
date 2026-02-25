@@ -1,5 +1,4 @@
 import {
-  SELL_SCORE,
   NEWS_SNIPPET_MAX_LENGTH,
   SELL_REASON,
   SCORE_MIN,
@@ -24,13 +23,6 @@ export function buildReasons(
   }
   if (features.isCaptainOrVice) {
     reasons.push(SELL_REASON.CAPTAIN_OR_VICE);
-  }
-  const templateHold =
-    !features.isFlagged &&
-    features.selectedByPercent !== null &&
-    features.selectedByPercent >= SELL_SCORE.TEMPLATE_THRESHOLD;
-  if (templateHold) {
-    reasons.push(SELL_REASON.TEMPLATE_HOLD);
   }
   if (features.hasNews && newsSnippet !== null) {
     reasons.push(`News: ${newsSnippet}`);

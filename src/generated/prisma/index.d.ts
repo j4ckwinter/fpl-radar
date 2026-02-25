@@ -5390,6 +5390,8 @@ export namespace Prisma {
     positionId: number | null
     nowCost: number | null
     selectedByPercent: number | null
+    transfersInEvent: number | null
+    transfersOutEvent: number | null
   }
 
   export type FplPlayerSumAggregateOutputType = {
@@ -5398,6 +5400,8 @@ export namespace Prisma {
     positionId: number | null
     nowCost: number | null
     selectedByPercent: number | null
+    transfersInEvent: number | null
+    transfersOutEvent: number | null
   }
 
   export type FplPlayerMinAggregateOutputType = {
@@ -5411,6 +5415,8 @@ export namespace Prisma {
     status: string | null
     news: string | null
     selectedByPercent: number | null
+    transfersInEvent: number | null
+    transfersOutEvent: number | null
     updatedAt: Date | null
   }
 
@@ -5425,6 +5431,8 @@ export namespace Prisma {
     status: string | null
     news: string | null
     selectedByPercent: number | null
+    transfersInEvent: number | null
+    transfersOutEvent: number | null
     updatedAt: Date | null
   }
 
@@ -5439,6 +5447,8 @@ export namespace Prisma {
     status: number
     news: number
     selectedByPercent: number
+    transfersInEvent: number
+    transfersOutEvent: number
     updatedAt: number
     _all: number
   }
@@ -5450,6 +5460,8 @@ export namespace Prisma {
     positionId?: true
     nowCost?: true
     selectedByPercent?: true
+    transfersInEvent?: true
+    transfersOutEvent?: true
   }
 
   export type FplPlayerSumAggregateInputType = {
@@ -5458,6 +5470,8 @@ export namespace Prisma {
     positionId?: true
     nowCost?: true
     selectedByPercent?: true
+    transfersInEvent?: true
+    transfersOutEvent?: true
   }
 
   export type FplPlayerMinAggregateInputType = {
@@ -5471,6 +5485,8 @@ export namespace Prisma {
     status?: true
     news?: true
     selectedByPercent?: true
+    transfersInEvent?: true
+    transfersOutEvent?: true
     updatedAt?: true
   }
 
@@ -5485,6 +5501,8 @@ export namespace Prisma {
     status?: true
     news?: true
     selectedByPercent?: true
+    transfersInEvent?: true
+    transfersOutEvent?: true
     updatedAt?: true
   }
 
@@ -5499,6 +5517,8 @@ export namespace Prisma {
     status?: true
     news?: true
     selectedByPercent?: true
+    transfersInEvent?: true
+    transfersOutEvent?: true
     updatedAt?: true
     _all?: true
   }
@@ -5600,6 +5620,8 @@ export namespace Prisma {
     status: string
     news: string | null
     selectedByPercent: number | null
+    transfersInEvent: number
+    transfersOutEvent: number
     updatedAt: Date
     _count: FplPlayerCountAggregateOutputType | null
     _avg: FplPlayerAvgAggregateOutputType | null
@@ -5633,6 +5655,8 @@ export namespace Prisma {
     status?: boolean
     news?: boolean
     selectedByPercent?: boolean
+    transfersInEvent?: boolean
+    transfersOutEvent?: boolean
     updatedAt?: boolean
     team?: boolean | FplTeamDefaultArgs<ExtArgs>
     position?: boolean | FplPositionDefaultArgs<ExtArgs>
@@ -5652,6 +5676,8 @@ export namespace Prisma {
     status?: boolean
     news?: boolean
     selectedByPercent?: boolean
+    transfersInEvent?: boolean
+    transfersOutEvent?: boolean
     updatedAt?: boolean
     team?: boolean | FplTeamDefaultArgs<ExtArgs>
     position?: boolean | FplPositionDefaultArgs<ExtArgs>
@@ -5668,6 +5694,8 @@ export namespace Prisma {
     status?: boolean
     news?: boolean
     selectedByPercent?: boolean
+    transfersInEvent?: boolean
+    transfersOutEvent?: boolean
     updatedAt?: boolean
     team?: boolean | FplTeamDefaultArgs<ExtArgs>
     position?: boolean | FplPositionDefaultArgs<ExtArgs>
@@ -5684,10 +5712,12 @@ export namespace Prisma {
     status?: boolean
     news?: boolean
     selectedByPercent?: boolean
+    transfersInEvent?: boolean
+    transfersOutEvent?: boolean
     updatedAt?: boolean
   }
 
-  export type FplPlayerOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "teamId" | "positionId" | "firstName" | "secondName" | "webName" | "nowCost" | "status" | "news" | "selectedByPercent" | "updatedAt", ExtArgs["result"]["fplPlayer"]>
+  export type FplPlayerOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "teamId" | "positionId" | "firstName" | "secondName" | "webName" | "nowCost" | "status" | "news" | "selectedByPercent" | "transfersInEvent" | "transfersOutEvent" | "updatedAt", ExtArgs["result"]["fplPlayer"]>
   export type FplPlayerInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     team?: boolean | FplTeamDefaultArgs<ExtArgs>
     position?: boolean | FplPositionDefaultArgs<ExtArgs>
@@ -5723,6 +5753,8 @@ export namespace Prisma {
       status: string
       news: string | null
       selectedByPercent: number | null
+      transfersInEvent: number
+      transfersOutEvent: number
       updatedAt: Date
     }, ExtArgs["result"]["fplPlayer"]>
     composites: {}
@@ -6161,6 +6193,8 @@ export namespace Prisma {
     readonly status: FieldRef<"FplPlayer", 'String'>
     readonly news: FieldRef<"FplPlayer", 'String'>
     readonly selectedByPercent: FieldRef<"FplPlayer", 'Float'>
+    readonly transfersInEvent: FieldRef<"FplPlayer", 'Int'>
+    readonly transfersOutEvent: FieldRef<"FplPlayer", 'Int'>
     readonly updatedAt: FieldRef<"FplPlayer", 'DateTime'>
   }
     
@@ -15962,6 +15996,8 @@ export namespace Prisma {
     status: 'status',
     news: 'news',
     selectedByPercent: 'selectedByPercent',
+    transfersInEvent: 'transfersInEvent',
+    transfersOutEvent: 'transfersOutEvent',
     updatedAt: 'updatedAt'
   };
 
@@ -16361,6 +16397,8 @@ export namespace Prisma {
     status?: StringFilter<"FplPlayer"> | string
     news?: StringNullableFilter<"FplPlayer"> | string | null
     selectedByPercent?: FloatNullableFilter<"FplPlayer"> | number | null
+    transfersInEvent?: IntFilter<"FplPlayer"> | number
+    transfersOutEvent?: IntFilter<"FplPlayer"> | number
     updatedAt?: DateTimeFilter<"FplPlayer"> | Date | string
     team?: XOR<FplTeamScalarRelationFilter, FplTeamWhereInput>
     position?: XOR<FplPositionScalarRelationFilter, FplPositionWhereInput>
@@ -16379,6 +16417,8 @@ export namespace Prisma {
     status?: SortOrder
     news?: SortOrderInput | SortOrder
     selectedByPercent?: SortOrderInput | SortOrder
+    transfersInEvent?: SortOrder
+    transfersOutEvent?: SortOrder
     updatedAt?: SortOrder
     team?: FplTeamOrderByWithRelationInput
     position?: FplPositionOrderByWithRelationInput
@@ -16400,6 +16440,8 @@ export namespace Prisma {
     status?: StringFilter<"FplPlayer"> | string
     news?: StringNullableFilter<"FplPlayer"> | string | null
     selectedByPercent?: FloatNullableFilter<"FplPlayer"> | number | null
+    transfersInEvent?: IntFilter<"FplPlayer"> | number
+    transfersOutEvent?: IntFilter<"FplPlayer"> | number
     updatedAt?: DateTimeFilter<"FplPlayer"> | Date | string
     team?: XOR<FplTeamScalarRelationFilter, FplTeamWhereInput>
     position?: XOR<FplPositionScalarRelationFilter, FplPositionWhereInput>
@@ -16418,6 +16460,8 @@ export namespace Prisma {
     status?: SortOrder
     news?: SortOrderInput | SortOrder
     selectedByPercent?: SortOrderInput | SortOrder
+    transfersInEvent?: SortOrder
+    transfersOutEvent?: SortOrder
     updatedAt?: SortOrder
     _count?: FplPlayerCountOrderByAggregateInput
     _avg?: FplPlayerAvgOrderByAggregateInput
@@ -16440,6 +16484,8 @@ export namespace Prisma {
     status?: StringWithAggregatesFilter<"FplPlayer"> | string
     news?: StringNullableWithAggregatesFilter<"FplPlayer"> | string | null
     selectedByPercent?: FloatNullableWithAggregatesFilter<"FplPlayer"> | number | null
+    transfersInEvent?: IntWithAggregatesFilter<"FplPlayer"> | number
+    transfersOutEvent?: IntWithAggregatesFilter<"FplPlayer"> | number
     updatedAt?: DateTimeWithAggregatesFilter<"FplPlayer"> | Date | string
   }
 
@@ -17233,6 +17279,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     team: FplTeamCreateNestedOneWithoutPlayersInput
     position: FplPositionCreateNestedOneWithoutPlayersInput
@@ -17251,6 +17299,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     transfersIn?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerInInput
     transfersOut?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerOutInput
@@ -17265,6 +17315,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     team?: FplTeamUpdateOneRequiredWithoutPlayersNestedInput
     position?: FplPositionUpdateOneRequiredWithoutPlayersNestedInput
@@ -17283,6 +17335,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transfersIn?: FplEntryTransferUncheckedUpdateManyWithoutPlayerInNestedInput
     transfersOut?: FplEntryTransferUncheckedUpdateManyWithoutPlayerOutNestedInput
@@ -17299,6 +17353,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
   }
 
@@ -17311,6 +17367,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -17325,6 +17383,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -18265,6 +18325,8 @@ export namespace Prisma {
     status?: SortOrder
     news?: SortOrder
     selectedByPercent?: SortOrder
+    transfersInEvent?: SortOrder
+    transfersOutEvent?: SortOrder
     updatedAt?: SortOrder
   }
 
@@ -18274,6 +18336,8 @@ export namespace Prisma {
     positionId?: SortOrder
     nowCost?: SortOrder
     selectedByPercent?: SortOrder
+    transfersInEvent?: SortOrder
+    transfersOutEvent?: SortOrder
   }
 
   export type FplPlayerMaxOrderByAggregateInput = {
@@ -18287,6 +18351,8 @@ export namespace Prisma {
     status?: SortOrder
     news?: SortOrder
     selectedByPercent?: SortOrder
+    transfersInEvent?: SortOrder
+    transfersOutEvent?: SortOrder
     updatedAt?: SortOrder
   }
 
@@ -18301,6 +18367,8 @@ export namespace Prisma {
     status?: SortOrder
     news?: SortOrder
     selectedByPercent?: SortOrder
+    transfersInEvent?: SortOrder
+    transfersOutEvent?: SortOrder
     updatedAt?: SortOrder
   }
 
@@ -18310,6 +18378,8 @@ export namespace Prisma {
     positionId?: SortOrder
     nowCost?: SortOrder
     selectedByPercent?: SortOrder
+    transfersInEvent?: SortOrder
+    transfersOutEvent?: SortOrder
   }
 
   export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -19753,6 +19823,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     position: FplPositionCreateNestedOneWithoutPlayersInput
     transfersIn?: FplEntryTransferCreateNestedManyWithoutPlayerInInput
@@ -19769,6 +19841,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     transfersIn?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerInInput
     transfersOut?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerOutInput
@@ -19814,6 +19888,8 @@ export namespace Prisma {
     status?: StringFilter<"FplPlayer"> | string
     news?: StringNullableFilter<"FplPlayer"> | string | null
     selectedByPercent?: FloatNullableFilter<"FplPlayer"> | number | null
+    transfersInEvent?: IntFilter<"FplPlayer"> | number
+    transfersOutEvent?: IntFilter<"FplPlayer"> | number
     updatedAt?: DateTimeFilter<"FplPlayer"> | Date | string
   }
 
@@ -19826,6 +19902,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     team: FplTeamCreateNestedOneWithoutPlayersInput
     transfersIn?: FplEntryTransferCreateNestedManyWithoutPlayerInInput
@@ -19842,6 +19920,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     transfersIn?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerInInput
     transfersOut?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerOutInput
@@ -20772,6 +20852,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     team: FplTeamCreateNestedOneWithoutPlayersInput
     position: FplPositionCreateNestedOneWithoutPlayersInput
@@ -20789,6 +20871,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     transfersOut?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerOutInput
   }
@@ -20807,6 +20891,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     team: FplTeamCreateNestedOneWithoutPlayersInput
     position: FplPositionCreateNestedOneWithoutPlayersInput
@@ -20824,6 +20910,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
     transfersIn?: FplEntryTransferUncheckedCreateNestedManyWithoutPlayerInInput
   }
@@ -20921,6 +21009,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     team?: FplTeamUpdateOneRequiredWithoutPlayersNestedInput
     position?: FplPositionUpdateOneRequiredWithoutPlayersNestedInput
@@ -20938,6 +21028,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transfersOut?: FplEntryTransferUncheckedUpdateManyWithoutPlayerOutNestedInput
   }
@@ -20962,6 +21054,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     team?: FplTeamUpdateOneRequiredWithoutPlayersNestedInput
     position?: FplPositionUpdateOneRequiredWithoutPlayersNestedInput
@@ -20979,6 +21073,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transfersIn?: FplEntryTransferUncheckedUpdateManyWithoutPlayerInNestedInput
   }
@@ -21057,6 +21153,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
   }
 
@@ -21069,6 +21167,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     position?: FplPositionUpdateOneRequiredWithoutPlayersNestedInput
     transfersIn?: FplEntryTransferUpdateManyWithoutPlayerInNestedInput
@@ -21085,6 +21185,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transfersIn?: FplEntryTransferUncheckedUpdateManyWithoutPlayerInNestedInput
     transfersOut?: FplEntryTransferUncheckedUpdateManyWithoutPlayerOutNestedInput
@@ -21100,6 +21202,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -21113,6 +21217,8 @@ export namespace Prisma {
     status: string
     news?: string | null
     selectedByPercent?: number | null
+    transfersInEvent?: number
+    transfersOutEvent?: number
     updatedAt?: Date | string
   }
 
@@ -21125,6 +21231,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     team?: FplTeamUpdateOneRequiredWithoutPlayersNestedInput
     transfersIn?: FplEntryTransferUpdateManyWithoutPlayerInNestedInput
@@ -21141,6 +21249,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     transfersIn?: FplEntryTransferUncheckedUpdateManyWithoutPlayerInNestedInput
     transfersOut?: FplEntryTransferUncheckedUpdateManyWithoutPlayerOutNestedInput
@@ -21156,6 +21266,8 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     news?: NullableStringFieldUpdateOperationsInput | string | null
     selectedByPercent?: NullableFloatFieldUpdateOperationsInput | number | null
+    transfersInEvent?: IntFieldUpdateOperationsInput | number
+    transfersOutEvent?: IntFieldUpdateOperationsInput | number
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

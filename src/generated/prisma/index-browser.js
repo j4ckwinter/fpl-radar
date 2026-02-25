@@ -156,6 +156,8 @@ exports.Prisma.FplPlayerScalarFieldEnum = {
   status: 'status',
   news: 'news',
   selectedByPercent: 'selectedByPercent',
+  transfersInEvent: 'transfersInEvent',
+  transfersOutEvent: 'transfersOutEvent',
   updatedAt: 'updatedAt'
 };
 

@@ -1,10 +1,6 @@
-import { z } from "zod";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma";
-import {
-  generateLeagueRadar,
-  type LeagueRadarLogger,
-} from "../../prediction/leagueRadar/generate";
+import { generateLeagueRadar } from "../../prediction/leagueRadar/generate";
 import { LEAGUE_RADAR } from "../../prediction/leagueRadar/constants";
 import { leagueIdParamSchema } from "../shared/schemas";
 import {
@@ -13,15 +9,8 @@ import {
   sendBadRequestGameweek,
 } from "../shared/replies";
 import { resolveAndValidateEventId } from "../shared/eventId";
-
-const querySchema = z.object({
-  eventId: z.coerce.number().int().positive().optional(),
-  maxEntries: z.coerce.number().int().min(1).optional(),
-  concurrency: z.coerce.number().int().min(1).optional(),
-});
-
-export type GetLeagueRadarParams = z.infer<typeof leagueIdParamSchema>;
-export type GetLeagueRadarQuery = z.infer<typeof querySchema>;
+import { getLeagueRadarQuerySchema } from "./getLeagueRadar.schemas";
+import { createLeagueRadarLogger } from "./getLeagueRadar.utils";
 
 /**
  * GET /league/:leagueId/radar
@@ -42,7 +31,7 @@ export async function getLeagueRadarHandler(
     return;
   }
 
-  const queryResult = querySchema.safeParse(request.query);
+  const queryResult = getLeagueRadarQuerySchema.safeParse(request.query);
   if (!queryResult.success) {
     await sendBadRequest(reply, "Invalid query parameters", {
       details: queryResult.error.flatten(),
@@ -77,21 +66,12 @@ export async function getLeagueRadarHandler(
     return;
   }
 
-  const logger: LeagueRadarLogger = {
-    info(obj, msg) {
-      request.log.info(obj, msg);
-    },
-    error(obj, msg) {
-      request.log.error(obj, msg);
-    },
-  };
-
   const result = await generateLeagueRadar({
     leagueId,
     eventId,
     maxEntries,
     concurrency: concurrency ?? LEAGUE_RADAR.DEFAULT_CONCURRENCY,
-    logger,
+    logger: createLeagueRadarLogger(request),
   });
 
   await reply.send(result);

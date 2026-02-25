@@ -24,6 +24,7 @@ function playerData(overrides: Partial<{
   selectedByPercent: number | null;
   nowCost: number;
   teamId: number;
+  transfersOutEvent: number;
 }> = {}) {
   return {
     status: "a",
@@ -31,6 +32,7 @@ function playerData(overrides: Partial<{
     selectedByPercent: 10,
     nowCost: 50,
     teamId: 1,
+    transfersOutEvent: 0,
     ...overrides,
   };
 }
@@ -61,7 +63,10 @@ describe("extractSellFeatures", () => {
       isBenched: false,
       isCaptainOrVice: false,
       nowCost: 50,
+      transfersOutEvent: 0,
+      momentumOut: 0,
       upcomingFixtureScore: null,
+      leagueOwnershipPct: null,
     });
   });
 
@@ -138,7 +143,10 @@ describe("extractSellFeatures", () => {
       isBenched: false,
       isCaptainOrVice: false,
       nowCost: 0,
+      transfersOutEvent: 0,
+      momentumOut: 0,
       upcomingFixtureScore: null,
+      leagueOwnershipPct: null,
     });
   });
 

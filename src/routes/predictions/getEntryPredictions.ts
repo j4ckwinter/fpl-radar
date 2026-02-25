@@ -1,9 +1,12 @@
-import { z } from "zod";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { getCache } from "../../lib/cache/cache";
 import { prisma } from "../../lib/prisma";
-import { predictTransfersForEntry } from "../../prediction";
+import {
+  predictTransfersForEntry,
+  isTransferPrediction,
+} from "../../prediction";
 import { InvalidSquadError, SquadNotFoundError } from "../../prediction/errors";
+import { parseRiskProfile } from "../../prediction/riskProfile";
 import { leagueEntryParamsSchema } from "../shared/schemas";
 import {
   sendBadRequest,
@@ -11,59 +14,16 @@ import {
   sendBadRequestGameweek,
 } from "../shared/replies";
 import { resolveAndValidateEventId } from "../shared/eventId";
-
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
-const PREDICTIONS_CACHE_TTL_SECONDS = 60;
-
-function predictionsCacheKey(
-  leagueId: number,
-  entryId: number,
-  eventId: number,
-  limit: number
-): string {
-  return `predictions:league:${leagueId}:entry:${entryId}:event:${eventId}:limit:${limit}`;
-}
-
-const querySchema = z.object({
-  eventId: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
-});
-
-export type GetEntryPredictionsParams = z.infer<typeof leagueEntryParamsSchema>;
-export type GetEntryPredictionsQuery = z.infer<typeof querySchema>;
-
-export interface EntryPredictionDisplay {
-  out: {
-    playerId: number;
-    webName: string;
-    team: { id: number; shortName: string };
-    position: { id: number; shortName: string };
-    nowCost: number;
-  };
-  in: {
-    playerId: number;
-    webName: string;
-    team: { id: number; shortName: string };
-    position: { id: number; shortName: string };
-    nowCost: number;
-  };
-  score: number;
-  probability: number;
-  estimatedCostDelta: number;
-  resultingBank: number | null;
-  reasons: string[];
-}
-
-export interface GetEntryPredictionsResponse {
-  meta: {
-    leagueId: number;
-    entryId: number;
-    eventId: number;
-    generatedAt: string;
-  };
-  predictions: EntryPredictionDisplay[];
-}
+import { PREDICTIONS_CACHE_TTL_SECONDS } from "./getEntryPredictions.constants";
+import { getEntryPredictionsQuerySchema } from "./getEntryPredictions.schemas";
+import type {
+  GetEntryPredictionsResponse,
+  PredictionPlayerDisplay,
+} from "./getEntryPredictions.types";
+import {
+  predictionsCacheKey,
+  mapPredictionsToDisplay,
+} from "./getEntryPredictions.utils";
 
 /**
  * GET /league/:leagueId/entry/:entryId/predictions
@@ -84,7 +44,7 @@ export async function getEntryPredictionsHandler(
     return;
   }
 
-  const queryResult = querySchema.safeParse(request.query);
+  const queryResult = getEntryPredictionsQuerySchema.safeParse(request.query);
   if (!queryResult.success) {
     await sendBadRequest(reply, "Invalid query parameters", {
       details: queryResult.error.flatten(),
@@ -93,7 +53,9 @@ export async function getEntryPredictionsHandler(
   }
 
   const { leagueId, entryId } = paramsResult.data;
-  const { limit, eventId: eventIdQuery } = queryResult.data;
+  const { limit, eventId: eventIdQuery, riskProfile: riskProfileQuery } =
+    queryResult.data;
+  const riskProfile = parseRiskProfile(riskProfileQuery);
 
   const eventIdResult = await resolveAndValidateEventId(prisma, eventIdQuery);
   if ("error" in eventIdResult) {
@@ -115,12 +77,21 @@ export async function getEntryPredictionsHandler(
     select: { id: true },
   });
   if (!entry) {
-    await sendNotFound(reply, `Entry ${entryId} not found in league ${leagueId}`);
+    await sendNotFound(
+      reply,
+      `Entry ${entryId} not found in league ${leagueId}`
+    );
     return;
   }
 
   const cache = await getCache();
-  const cacheKey = predictionsCacheKey(leagueId, entryId, eventId, limit);
+  const cacheKey = predictionsCacheKey(
+    leagueId,
+    entryId,
+    eventId,
+    limit,
+    riskProfile
+  );
   const cached = await cache.get<GetEntryPredictionsResponse>(cacheKey);
   if (cached !== null) {
     await reply.send(cached);
@@ -136,6 +107,7 @@ export async function getEntryPredictionsHandler(
       entryId,
       eventId,
       maxResults: limit,
+      riskProfile,
     });
     predictions = result.predictions;
   } catch (err) {
@@ -151,9 +123,10 @@ export async function getEntryPredictionsHandler(
     throw err;
   }
 
+  const transferPredictions = predictions.filter(isTransferPrediction);
   const playerIds = [
     ...new Set(
-      predictions.flatMap((p) => [p.outPlayerId, p.inPlayerId])
+      transferPredictions.flatMap((p) => [p.outPlayerId, p.inPlayerId])
     ),
   ];
 
@@ -173,7 +146,7 @@ export async function getEntryPredictionsHandler(
         })
       : [];
 
-  const playerMap = new Map(
+  const playerMap = new Map<number, PredictionPlayerDisplay>(
     players.map((p) => [
       p.id,
       {
@@ -186,41 +159,7 @@ export async function getEntryPredictionsHandler(
     ])
   );
 
-  const displayPredictions: EntryPredictionDisplay[] = predictions.map(
-    (p) => {
-      const out = playerMap.get(p.outPlayerId);
-      const inPlayer = playerMap.get(p.inPlayerId);
-      if (!out || !inPlayer) {
-        throw new Error(
-          `Missing player data for out=${p.outPlayerId} in=${p.inPlayerId}`
-        );
-      }
-      return {
-        out: {
-          playerId: out.playerId,
-          webName: out.webName,
-          team: { id: out.team.id, shortName: out.team.shortName },
-          position: { id: out.position.id, shortName: out.position.shortName },
-          nowCost: out.nowCost,
-        },
-        in: {
-          playerId: inPlayer.playerId,
-          webName: inPlayer.webName,
-          team: { id: inPlayer.team.id, shortName: inPlayer.team.shortName },
-          position: {
-            id: inPlayer.position.id,
-            shortName: inPlayer.position.shortName,
-          },
-          nowCost: inPlayer.nowCost,
-        },
-        score: p.score,
-        probability: p.probability,
-        estimatedCostDelta: p.features.estimatedCostDelta,
-        resultingBank: p.features.resultingBank,
-        reasons: p.reasons,
-      };
-    }
-  );
+  const displayPredictions = mapPredictionsToDisplay(predictions, playerMap);
 
   const response: GetEntryPredictionsResponse = {
     meta: {

@@ -9,15 +9,26 @@ vi.mock("../../lib/prisma", () => ({
 vi.mock("../fixtures/teamUpcomingScores", () => ({
   loadTeamUpcomingFixtureScores: vi.fn().mockResolvedValue(new Map()),
 }));
+vi.mock("../leagueOwnership/compute", () => ({
+  getLeagueOwnership: vi.fn().mockResolvedValue({
+    leagueId: 1,
+    eventId: 5,
+    totalEntries: 10,
+    ownershipByPlayerId: new Map(),
+  }),
+}));
+vi.mock("../momentum/p95", () => ({
+  loadMomentumP95: vi.fn().mockResolvedValue({ inP95: 100, outP95: 100 }),
+}));
 vi.mock("./features", () => ({
   extractSellFeatures: vi.fn(),
 }));
 
 import { prisma } from "../../lib/prisma";
+import { getLeagueOwnership } from "../leagueOwnership/compute";
 import { extractSellFeatures } from "./features";
 import { scoreSellCandidates } from "./score";
 import { SquadNotFoundError } from "../errors";
-import { SELL_SCORE } from "./constants";
 
 const leagueId = 1;
 const entryId = 100;
@@ -73,6 +84,9 @@ function features(overrides: Partial<{
   isCaptainOrVice: boolean;
   nowCost: number;
   upcomingFixtureScore: number | null;
+  transfersOutEvent: number;
+  momentumOut: number;
+  leagueOwnershipPct: number | null;
 }> = {}) {
   return {
     isFlagged: false,
@@ -83,18 +97,27 @@ function features(overrides: Partial<{
     isCaptainOrVice: false,
     nowCost: 50,
     upcomingFixtureScore: null,
+    transfersOutEvent: 0,
+    momentumOut: 0,
+    leagueOwnershipPct: null,
     ...overrides,
   };
 }
 
 describe("scoreSellCandidates", () => {
   beforeEach(() => {
+    vi.mocked(getLeagueOwnership).mockResolvedValue({
+      leagueId: 1,
+      eventId: 5,
+      totalEntries: 10,
+      ownershipByPlayerId: new Map(),
+    });
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshotWithPicks([pick(1), pick(2)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1 },
-      { id: 2, status: "a", news: null, selectedByPercent: 40, nowCost: 55, teamId: 2 },
+      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1, transfersOutEvent: 0 },
+      { id: 2, status: "a", news: null, selectedByPercent: 40, nowCost: 55, teamId: 2, transfersOutEvent: 0 },
     ] as never);
     vi.mocked(extractSellFeatures).mockReturnValue(
       new Map([
@@ -136,6 +159,7 @@ describe("scoreSellCandidates", () => {
         selectedByPercent: true,
         nowCost: true,
         teamId: true,
+        transfersOutEvent: true,
       },
     });
   });
@@ -196,9 +220,9 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1), pick(2), pick(3)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1 },
-      { id: 2, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 2 },
-      { id: 3, status: "i", news: null, selectedByPercent: 10, nowCost: 50, teamId: 3 },
+      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1, transfersOutEvent: 0 },
+      { id: 2, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 2, transfersOutEvent: 0 },
+      { id: 3, status: "i", news: null, selectedByPercent: 10, nowCost: 50, teamId: 3, transfersOutEvent: 0 },
     ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
@@ -230,7 +254,7 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "i", news: "Injured", selectedByPercent: 35, nowCost: 50, teamId: 1 },
+      { id: 1, status: "i", news: "Injured", selectedByPercent: 35, nowCost: 50, teamId: 1, transfersOutEvent: 0 },
     ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
@@ -242,35 +266,40 @@ describe("scoreSellCandidates", () => {
     );
   });
 
-  it("adds High-ownership template hold when not flagged and selectedByPercent >= threshold", async () => {
+  it("safe riskProfile penalises selling high league ownership more than risky", async () => {
+    vi.mocked(getLeagueOwnership).mockResolvedValue({
+      leagueId: 1,
+      eventId: 5,
+      totalEntries: 10,
+      ownershipByPlayerId: new Map([[1, 0.8]]),
+    });
     vi.mocked(extractSellFeatures).mockReturnValue(
-      new Map([
-        [
-          1,
-          features({
-            isFlagged: false,
-            selectedByPercent: SELL_SCORE.TEMPLATE_THRESHOLD,
-          }),
-        ],
-      ])
+      new Map([[1, features({ transfersOutEvent: 50 })]])
     );
     vi.mocked(prisma.fplEntrySnapshot.findUnique).mockResolvedValue(
       snapshotWithPicks([pick(1)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      {
-        id: 1,
-        status: "a",
-        news: null,
-        selectedByPercent: SELL_SCORE.TEMPLATE_THRESHOLD,
-        nowCost: 50,
-        teamId: 1,
-      },
+      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1, transfersOutEvent: 50 },
     ] as never);
 
-    const result = await scoreSellCandidates({ leagueId, entryId, eventId });
+    const safeResult = await scoreSellCandidates({
+      leagueId,
+      entryId,
+      eventId,
+      riskProfile: "safe",
+    });
+    const riskyResult = await scoreSellCandidates({
+      leagueId,
+      entryId,
+      eventId,
+      riskProfile: "risky",
+    });
 
-    expect(result.scores[0].reasons).toContain("High-ownership template hold");
+    expect(safeResult.scores[0].sellScore).toBeLessThan(riskyResult.scores[0].sellScore);
+    expect(safeResult.scores[0].reasons).toContain(
+      "Widely owned in your league (less urgency to sell)"
+    );
   });
 
   it("respects topN and caps at 15", async () => {
@@ -293,6 +322,7 @@ describe("scoreSellCandidates", () => {
         selectedByPercent: 10,
         nowCost: 50,
         teamId: 1,
+        transfersOutEvent: 0,
       })) as never
     );
 
@@ -314,7 +344,7 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "a", news: null, selectedByPercent: 25, nowCost: 50, teamId: 1 },
+      { id: 1, status: "a", news: null, selectedByPercent: 25, nowCost: 50, teamId: 1, transfersOutEvent: 0 },
     ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
@@ -332,6 +362,9 @@ describe("scoreSellCandidates", () => {
         isCaptainOrVice: false,
         nowCost: 50,
         upcomingFixtureScore: null,
+        transfersOutEvent: 0,
+        momentumOut: expect.any(Number),
+        leagueOwnershipPct: null,
       },
     });
   });
@@ -355,8 +388,8 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1), pick(2)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1 },
-      { id: 2, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 2 },
+      { id: 1, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 1, transfersOutEvent: 0 },
+      { id: 2, status: "a", news: null, selectedByPercent: 10, nowCost: 50, teamId: 2, transfersOutEvent: 0 },
     ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
@@ -389,7 +422,7 @@ describe("scoreSellCandidates", () => {
       snapshotWithPicks([pick(1)]) as never
     );
     vi.mocked(prisma.fplPlayer.findMany).mockResolvedValue([
-      { id: 1, status: "u", news: "Out", selectedByPercent: 0, nowCost: 50, teamId: 1 },
+      { id: 1, status: "u", news: "Out", selectedByPercent: 0, nowCost: 50, teamId: 1, transfersOutEvent: 0 },
     ] as never);
 
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });

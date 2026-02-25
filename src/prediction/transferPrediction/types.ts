@@ -3,6 +3,7 @@ export interface PredictTransfersForEntryParams {
   entryId: number;
   eventId: number;
   maxResults?: number;
+  riskProfile?: "safe" | "balanced" | "risky";
 }
 
 export interface TransferPrediction {
@@ -20,4 +21,19 @@ export interface TransferPrediction {
     teamLimitOk: boolean;
     positionOk: boolean;
   };
+}
+
+export interface NoTransferPrediction {
+  type: "NO_TRANSFER";
+  score: number;
+  probability: number;
+  reasons: string[];
+}
+
+export type EntryPrediction = TransferPrediction | NoTransferPrediction;
+
+export function isTransferPrediction(
+  p: EntryPrediction
+): p is TransferPrediction {
+  return "outPlayerId" in p;
 }

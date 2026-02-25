@@ -3,6 +3,7 @@ export interface ScoreSellCandidatesParams {
   entryId: number;
   eventId: number;
   topN?: number;
+  riskProfile?: "safe" | "balanced" | "risky";
 }
 
 export interface ExtractSellFeaturesParams {
@@ -20,6 +21,7 @@ export interface ExtractSellFeaturesParams {
       selectedByPercent: number | null;
       nowCost: number;
       teamId: number;
+      transfersOutEvent: number;
     }
   >;
   teamUpcomingScores?: Map<number, number>;
@@ -37,6 +39,10 @@ export interface SellCandidateScore {
     isBenched: boolean;
     isCaptainOrVice: boolean;
     nowCost: number;
+    transfersOutEvent: number;
+    momentumOut: number; // 0..1
     upcomingFixtureScore: number | null;
+    /** Fraction of league entries that own this player, 0..1. */
+    leagueOwnershipPct: number | null;
   };
 }

@@ -20,6 +20,8 @@ export const bootstrapElementSchema = z.object({
   status: z.string(),
   news: z.string(),
   selected_by_percent: z.string(),
+  transfers_in_event: z.number().optional(),
+  transfers_out_event: z.number().optional(),
 });
 
 /** Position type (e.g. GKP, DEF, MID, FWD). */
