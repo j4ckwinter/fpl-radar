@@ -118,6 +118,32 @@ Thresholds are **league-size aware** (e.g. small leagues use count-based “high
 - **PostgreSQL** (e.g. `localhost:5432`)
 - **Redis** (required for worker and API queue/cache; e.g. `localhost:6379`)
 
+### Running PostgreSQL and Redis with Docker
+
+If you don’t have Postgres or Redis installed locally, you can run them in Docker:
+
+**PostgreSQL**
+
+```bash
+docker run -d \
+  --name fpl-radar-db \
+  -p 5432:5432 \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=fpl_radar \
+  postgres:16-alpine
+```
+
+Then use `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fpl_radar` in `.env`.
+
+**Redis**
+
+```bash
+docker run -d --name fpl-radar-redis -p 6379:6379 redis:7-alpine
+```
+
+Use `REDIS_URL=redis://localhost:6379` in `.env`.
+
 ### 1. Install and configure
 
 ```bash
