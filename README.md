@@ -1,266 +1,277 @@
-# fpl-radar
+# FPL Radar
 
-**fpl-radar** is a backend engine for Fantasy Premier League (FPL) analysis. It exists to support mini-league managers with rival-aware, probabilistic insights: instead of generic stats, it focuses on **predicting likely transfers by rivals in a specific league**, using constraints, behaviour, and form. The goal is a decision-support system that answers “what are my rivals likely to do?” and “how risky is my move given that context?”, not just another stats API. The backend is API- and worker-focused today and is designed to support a future web frontend.
+A backend engine for **Fantasy Premier League (FPL)** mini-league analysis. It predicts likely transfers by rivals in a specific league and supports risk-aware decisions: “what are my rivals likely to do?” and “how risky is my move?”. API- and worker-focused, ready for a future web frontend.
+
+---
+
+## Contents
+
+- [Core idea](#core-idea)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Getting started](#getting-started)
+- [API](#api)
+- [Scripts](#scripts)
+- [Status & roadmap](#status--roadmap)
+- [Non-goals](#non-goals)
+- [License](#license)
 
 ---
 
 ## Core idea
 
-FPL managers in a mini-league lack visibility into what their rivals are likely to do. Generic tools show ownership and form; they do not model *who might sell whom* or *which bandwagons your league might jump on*.
+Mini-league managers see ownership and form, but not *who might sell whom* or *which bandwagons the league might follow*. FPL Radar models rival constraints and behaviour to predict likely transfers and moves, and to answer:
 
-fpl-radar addresses this by modelling rival constraints and behaviour to predict likely transfers and moves. Examples of the kinds of questions it aims to support:
+- Which players are rivals most likely to sell (blanks, injury, form)?
+- Which bandwagons are they likely to follow?
+- How risky is a differential given what the league might do?
 
-- Which players are most likely to be sold by rivals (e.g. due to blanks, injury, or form)?
-- Which bandwagons are my rivals likely to follow?
-- How risky is a differential pick given what my league might do?
-
-The value is in making these insights explicit and risk-aware, so you can plan moves with rival behaviour in mind.
+Insights are explicit and risk-aware so you can plan with rival behaviour in mind.
 
 ---
 
-## High-level architecture
+## Features
 
-- **API service (Fastify)** – HTTP API for diagnostics and, later, frontend and third-party consumers.
-- **Worker service (BullMQ)** – Background jobs (e.g. ingestion, league sync, analysis).
-- **PostgreSQL (Prisma)** – Primary store for reference data (teams, players, gameweeks), snapshots, and league/rival data.
-- **Redis** – Caching for FPL API responses and queue backend for BullMQ.
-- **FPL public API** – Upstream source for bootstrap-static, league standings, and related data.
+### Transfer predictions (per entry)
+
+- **OUT → IN** suggestions with scores and probabilities (softmax over transfer score).
+- **Risk profiles**: `safe` (cover + template), `balanced` (moderate), `risky` (differentials with conviction). Ownership is handled via profile-shaped curves and league-size aware thresholds; risky mode applies a “conviction gate” so low-owned punts need strong momentum or fixtures.
+- **NO_TRANSFER** outcome when no strong transfer is identified (e.g. stable squad), so the engine doesn’t force a move.
+- **Weak-link penalty** so “strong sell + weak buy” pairs rank lower; diversity caps (e.g. max 2 per OUT/IN) keep the list varied while staying score-ordered.
+- Enriched with player/team/position and reasons (sell/buy signals, budget, etc.).
+
+### League radar
+
+- League-wide **top buys**, **top sells**, and **top transfers** across entries (with optional `maxEntries` and `concurrency`).
+
+### Ingestion & jobs
+
+- **Bootstrap** (teams, players, positions, gameweeks), **league standings**, **entry picks**, **entry transfers**.
+- **League refresh** job: standings → picks → transfers → radar in one pipeline; poll job status via `/jobs/:jobId`.
+
+### Risk profiles (v1.1)
+
+| Profile   | Sell (league)     | Buy (league)              | Notes                          |
+|-----------|-------------------|---------------------------|--------------------------------|
+| **Safe**  | Strong penalty (L²) | Curved: high L rewarded   | Cover + avoid risky template sells |
+| **Balanced** | Moderate penalty | Mild preference (0.3 + 0.4×L) | Default; momentum/fixtures dominate |
+| **Risky** | Small penalty (0.35×L) | 1−L flattened; conviction gate | Differentials only when momentum/fixtures are strong |
+
+Thresholds are **league-size aware** (e.g. small leagues use count-based “high ownership”). See `src/prediction/RISK_PROFILES.md` for detail.
+
+---
+
+## Architecture
 
 ```
-                    +------------------+
-                    |   FPL Public API |
-                    +--------+---------+
-                             |
-         +-------------------+-------------------+
-         |                   |                   |
-         v                   v                   v
-  +-------------+    +-------------+    +------------------+
-  |   Fastify   |    |   Worker    |    |  Redis (cache +  |
-  |   (API)     |    |  (BullMQ)   |    |  queues)         |
-  +------+------+    +------+------+    +------------------+
-         |                   |
-         +--------+----------+
-                  |
-                  v
-         +------------------+
-         |   PostgreSQL     |
-         |   (Prisma)       |
-         +------------------+
+                    ┌──────────────────┐
+                    │  FPL Public API  │
+                    └────────┬─────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+         ▼                   ▼                   ▼
+  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐
+  │   Fastify   │    │   Worker    │    │ Redis (cache +  │
+  │   (API)     │    │  (BullMQ)   │    │ queues)         │
+  └──────┬──────┘    └──────┬──────┘    └─────────────────┘
+         │                   │
+         └─────────┬─────────┘
+                   │
+                   ▼
+         ┌─────────────────┐
+         │   PostgreSQL    │
+         │   (Prisma)      │
+         └─────────────────┘
 ```
+
+- **API** – HTTP endpoints for league, predictions, radar, refresh, jobs.
+- **Worker** – Processes league refresh (standings → picks → transfers → radar).
+- **PostgreSQL** – Reference data, snapshots, league/entry data.
+- **Redis** – FPL response cache and BullMQ queue backend.
 
 ---
 
 ## Tech stack
 
-- Node.js + TypeScript (strict)
-- Fastify – HTTP server
-- PostgreSQL + Prisma (v7, driver adapter)
-- Redis – caching and BullMQ
-- BullMQ – job queues
-- Zod – runtime validation of upstream payloads
-- Pino – structured logging
-- Vitest – unit tests
-- pnpm – package manager
+| Layer      | Choice                |
+|-----------|------------------------|
+| Runtime   | Node.js 20+ (LTS)     |
+| Language  | TypeScript (strict)    |
+| HTTP      | Fastify                |
+| DB        | PostgreSQL + Prisma 7 |
+| Cache/Queue | Redis + BullMQ      |
+| Validation| Zod                    |
+| Logging   | Pino                   |
+| Tests     | Vitest                 |
+| Package   | pnpm                   |
 
 ---
 
-## Data flow overview
-
-1. **FPL public data** – The system fetches data from the official FPL API (bootstrap-static, league standings, entry picks, transfers). Responses are validated with Zod and cached in Redis (with in-memory fallback).
-2. **Reference data persistence** – Bootstrap data (teams, players, positions, gameweeks) is ingested via a script and stored in PostgreSQL. Each run creates a snapshot record for traceability.
-3. **League ingestion** – League standings and entry-level data (picks, transfers) can be fetched and stored for the target mini-league(s). The **league refresh** job runs standings → picks → transfers (and optionally league radar) in one pipeline.
-4. **Rival analysis and prediction** – A pipeline consumes reference and league data to score sell/buy candidates and produce per-entry transfer predictions and league-wide “radar” (top buys, sells, transfers). Results are exposed via the API and can be recomputed on demand or after a refresh.
-
----
-
-## Getting started (local development)
-
-**Quick start (after cloning):**
-
-1. `pnpm install` → `cp .env.example .env` → set `DATABASE_URL` and `REDIS_URL`.
-2. `pnpm prisma migrate deploy` → `pnpm ingest:bootstrap`.
-3. (Optional) `pnpm ingest:league` to load a league (uses `FPL_LEAGUE_ID`).
-4. Start Redis, then in two terminals: `pnpm dev` (API) and `pnpm worker` (worker).
-5. `curl -X POST http://localhost:3000/league/LEAGUE_ID/refresh -H "Content-Type: application/json" -d '{}'` to run a refresh; poll with `curl http://localhost:3000/jobs/JOB_ID`.
-
----
+## Getting started
 
 ### Prerequisites
 
-- **Node.js** – v20+ (LTS recommended)
-- **pnpm** – v10+ (see [pnpm](https://pnpm.io/))
-- **PostgreSQL** – running locally or reachable (e.g. default port 5432)
-- **Redis** – running locally or reachable (optional for API cache; **required** for BullMQ queues and the worker)
+- **Node.js** v20+
+- **pnpm** v10+
+- **PostgreSQL** (e.g. `localhost:5432`)
+- **Redis** (required for worker and API queue/cache; e.g. `localhost:6379`)
 
-### Step 1: Install and configure
+### 1. Install and configure
 
 ```bash
 pnpm install
 cp .env.example .env
 ```
 
-Edit `.env` and set at least:
+Set in `.env`:
 
-- `DATABASE_URL` – PostgreSQL connection string (e.g. `postgresql://USER:PASSWORD@localhost:5432/fpl_radar`)
-- `REDIS_URL` – required for queues and worker; e.g. `redis://localhost:6379`
-- `FPL_LEAGUE_ID` – (optional) default league ID for scripts, e.g. `133057`
+- `DATABASE_URL` – e.g. `postgresql://user:pass@localhost:5432/fpl_radar`
+- `REDIS_URL` – e.g. `redis://localhost:6379`
+- (Optional) `FPL_LEAGUE_ID`, `FPL_ENTRY_ID`, `FPL_EVENT_ID`, `PORT`, `NODE_ENV`
 
-Other optional vars: `PORT`, `FPL_BASE_URL`, `NODE_ENV`, `FPL_EVENT_ID`, `FPL_ENTRY_ID`.
-
-### Step 2: Database and reference data
+### 2. Database and bootstrap
 
 ```bash
 pnpm prisma migrate deploy
 pnpm ingest:bootstrap
 ```
 
-This loads teams, players, positions, and gameweeks from FPL into PostgreSQL. Required before using predictions or league refresh.
+Loads teams, players, positions, gameweeks from FPL. Required before predictions or refresh.
 
-### Step 3: (Optional) Load a league
-
-To use league overview, predictions, or refresh you need at least one league in the DB. Ingest standings for your league (creates/updates the league and its entries):
+### 3. (Optional) Load a league
 
 ```bash
 pnpm ingest:league
 ```
 
-Uses `FPL_LEAGUE_ID` from `.env`. Then you can ingest entry picks and transfers for that league, or use the **league refresh** job to do it in one go (see Step 5).
+Uses `FPL_LEAGUE_ID`. Then use the **league refresh** API (or ingest scripts) to load picks and transfers.
 
-### Step 4: Start Redis, API, and worker
+### 4. Run Redis, API, and worker
 
-Start Redis (required for the worker and for enqueueing refresh jobs):
+**Terminal 1 – Redis** (if not already running):
 
 ```bash
 redis-server
 # or: docker run -d -p 6379:6379 redis:alpine
 ```
 
-In **two separate terminals**:
-
-**Terminal A – API**
+**Terminal 2 – API**
 
 ```bash
 pnpm dev
 ```
 
-**Terminal B – Worker**
+**Terminal 3 – Worker**
 
 ```bash
 pnpm worker
 ```
 
-The API serves HTTP; the worker processes league refresh jobs from the queue. Both need `DATABASE_URL`; the worker and the API’s enqueue path need `REDIS_URL`.
+### 5. Trigger a league refresh
 
-### Step 5: Trigger a league refresh (recommended before predictions)
-
-With the API and worker running, trigger a full refresh for a league (standings → entry picks → entry transfers → league radar). Replace `123` with a `leagueId` that exists in your DB:
+Replace `LEAGUE_ID` with a league that exists in your DB:
 
 ```bash
-curl -X POST "http://localhost:3000/league/123/refresh" \
+curl -X POST "http://localhost:3000/league/LEAGUE_ID/refresh" \
   -H "Content-Type: application/json" \
-  -d '{}'
+  -d '{"eventId": 27, "maxEntries": 50}'
 ```
 
-Or with options (e.g. limit entries for a quicker run):
-
-```bash
-curl -X POST "http://localhost:3000/league/123/refresh" \
-  -H "Content-Type: application/json" \
-  -d '{"eventId": 26, "maxEntries": 20, "force": false}'
-```
-
-Response: `{ "leagueId": 123, "jobId": "...", "status": "queued" }`. Copy `jobId` to poll status.
-
-**Poll job status:**
+Response: `{ "leagueId": ..., "jobId": "...", "status": "queued" }`. Poll:
 
 ```bash
 curl "http://localhost:3000/jobs/JOB_ID"
 ```
 
-Response includes `state` (`waiting`, `active`, `completed`, `failed`), `progress` (e.g. `{ "step": "picks", "completed": 5, "total": 20 }`), `result`, and `error` (if failed). Once the job is `completed`, the league has fresh standings, picks, and transfers (and radar was recomputed).
+When `state` is `completed`, predictions and radar use fresh data. Restart the API if you want it to pick up new bootstrap/ingestion data in memory (e.g. p95 momentum).
 
 ---
 
-## API endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/league/:leagueId` | League overview: metadata + rivals (rank, points, optional `hasSnapshot`). Query: `limit`, `offset`, `eventId`. |
-| GET | `/league/:leagueId/entry/:entryId/predictions` | Per-entry transfer predictions (enriched with player/team/position). Query: `eventId`, `limit`. |
-| GET | `/league/:leagueId/radar` | League-wide radar (top buys, sells, transfers). Query: `eventId`, `maxEntries`, `concurrency`. |
-| POST | `/league/:leagueId/refresh` | Enqueue a league refresh job. Body (optional): `eventId`, `maxEntries`, `force`. Returns `jobId` and `status: "queued"`. |
-| GET | `/jobs/:jobId` | Job status: `state`, `progress`, `result`, `error`. |
-| GET | `/admin/bootstrap/latest` | Latest bootstrap ingestion snapshot (diagnostic). |
+## API
 
 Base URL: `http://localhost:3000` (or your `PORT`).
 
-**Example: league overview**
+| Method | Path | Description |
+|--------|------|-------------|
+| **GET** | `/league/:leagueId` | League overview: metadata + rivals. Query: `limit`, `offset`, `eventId`. |
+| **GET** | `/league/:leagueId/entry/:entryId/predictions` | Transfer predictions for one entry. Query: `eventId`, `limit`, **`riskProfile`** (`safe` \| `balanced` \| `risky`). May include a **NO_TRANSFER** item when appropriate. |
+| **GET** | `/league/:leagueId/radar` | League radar: top buys, sells, transfers. Query: `eventId`, `maxEntries`, `concurrency`. |
+| **POST** | `/league/:leagueId/refresh` | Enqueue league refresh. Body (optional): `eventId`, `maxEntries`, `force`. Returns `jobId`. |
+| **GET** | `/jobs/:jobId` | Job status: `state`, `progress`, `result`, `error`. |
+| **GET** | `/admin/bootstrap/latest` | Latest bootstrap snapshot (diagnostic). |
+
+### Example: predictions with risk profile
 
 ```bash
-curl "http://localhost:3000/league/123?limit=50&offset=0"
+# Safe (cover + template)
+curl -s "http://localhost:3000/league/133057/entry/1328234/predictions?eventId=27&limit=10&riskProfile=safe" | jq .
+
+# Balanced (default)
+curl -s "http://localhost:3000/league/133057/entry/1328234/predictions?eventId=27&limit=10&riskProfile=balanced" | jq .
+
+# Risky (differentials with conviction)
+curl -s "http://localhost:3000/league/133057/entry/1328234/predictions?eventId=27&limit=10&riskProfile=risky" | jq .
 ```
 
-**Example: entry predictions** (after refresh has run for that league/event)
+### Example: league radar
 
 ```bash
-curl "http://localhost:3000/league/123/entry/456789/predictions?limit=20"
-```
-
-**Example: league radar**
-
-```bash
-curl "http://localhost:3000/league/123/radar?eventId=26"
+curl -s "http://localhost:3000/league/133057/radar?eventId=27" | jq .
 ```
 
 ---
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev` | Start the Fastify API with tsx watch (default port 3000). |
-| `pnpm start` | Start the API from built output (`node dist/index.js`). Run `pnpm build` first. |
-| `pnpm worker` | Start the BullMQ worker (processes league refresh jobs). Run in a separate terminal. |
-| `pnpm ingest:bootstrap` | Fetch bootstrap-static from FPL; upsert teams, players, positions, gameweeks. Idempotent. |
-| `pnpm ingest:league` | Ingest league standings for `FPL_LEAGUE_ID` (creates/updates league and entries). |
-| `pnpm ingest:entry-picks` | Ingest entry picks for league/event (uses `FPL_LEAGUE_ID`, `FPL_EVENT_ID` optional). |
-| `pnpm ingest:entry-transfers` | Ingest entry transfer history for league entries. |
-| `pnpm predict:transfers` | Run per-entry transfer predictions for `FPL_LEAGUE_ID` + `FPL_ENTRY_ID` (script; no API). |
-| `pnpm predict:league-radar` | Run league radar for `FPL_LEAGUE_ID` (script; no API). |
-| `pnpm test` | Run Vitest once. |
-| `pnpm test:watch` | Run Vitest in watch mode. |
-| `pnpm build` | Compile TypeScript (tsc). |
-| `pnpm prisma` | Prisma CLI (e.g. `pnpm prisma migrate dev`, `pnpm prisma generate`). |
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start API with tsx watch (port 3000). |
+| `pnpm start` | Start API from build (`pnpm build` first). |
+| `pnpm worker` | Start BullMQ worker (separate terminal). |
+| `pnpm ingest:bootstrap` | Ingest bootstrap-static (teams, players, gameweeks). |
+| `pnpm ingest:league` | Ingest league standings (`FPL_LEAGUE_ID`). |
+| `pnpm ingest:entry-picks` | Ingest entry picks for league/event. |
+| `pnpm ingest:entry-transfers` | Ingest entry transfer history. |
+| `pnpm predict:transfers` | Run transfer predictions (script; uses `FPL_LEAGUE_ID`, `FPL_ENTRY_ID`, `FPL_RISK_PROFILE`). |
+| `pnpm predict:league-radar` | Run league radar (script). |
+| **`pnpm predict:compare-profiles`** | Compare top buys/sells/transfers across safe, balanced, risky for one entry (debug). |
+| **`pnpm validate:ranking`** | Run ranking + predictions tests and print validation checklist. |
+| `pnpm test` | Run Vitest. |
+| `pnpm test:watch` | Vitest watch mode. |
+| `pnpm build` | Compile TypeScript. |
+| `pnpm prisma` | Prisma CLI. |
 
 ---
 
-## Current status
+## Status & roadmap
 
-- **Foundations** – API (Fastify), FPL client with caching and Zod validation, Prisma schema and migrations, BullMQ worker skeleton.
-- **Ingestion** – Bootstrap, league standings, entry picks, and entry transfers; league refresh job runs the full pipeline (standings → picks → transfers → radar).
-- **Prediction** – Per-entry transfer predictions (sell/buy scoring, candidates, softmax probabilities) and league-wide radar (top buys, sells, transfers). Exposed via API and scripts.
-- **API** – League overview, per-entry predictions, league radar, POST league refresh, GET job status. Validation and error handling in place.
+**Done**
 
----
+- API (Fastify), FPL client (caching, Zod), Prisma, BullMQ worker.
+- Ingestion: bootstrap, league standings, entry picks, entry transfers; league refresh job (standings → picks → transfers → radar).
+- **Transfer predictions**: sell/buy scoring, candidates, diversity (score-ordered + caps), weak-link penalty, NO_TRANSFER when weak signals, softmax probabilities.
+- **Risk profiles v1.1**: safe/balanced/risky with ownership curves, league-size aware thresholds, risky conviction gating, profile-specific reasons.
+- **Ranking v1.3**: score-respecting diversity, no safe-only transfer penalty, probabilities on final list.
+- Endpoints: league overview, entry predictions (with `riskProfile`), league radar, refresh, job status.
 
-## Roadmap
+**Roadmap**
 
-- Persist league radar (e.g. DB or cache) for faster reads.
+- Persist league radar (DB or cache) for faster reads.
 - Frontend or third-party consumers.
-- Risk-mode insights (differentials vs likely rival moves).
+- Optional: more risk-mode insights (e.g. “rival move likelihood” breakdowns).
 
 ---
 
 ## Non-goals
 
-- **Not an official FPL API** – This project consumes the public FPL API; it does not replace or represent it.
-- **Not real-time** – Data is fetched and processed on a schedule or on demand; there is no live push from FPL.
-- **Not guaranteed predictions** – Outputs are probabilistic and for decision support only; no guarantee of accuracy or outcomes.
+- **Not the official FPL API** – Consumes the public API; does not replace or represent it.
+- **Not real-time** – Data is fetched on demand or via jobs; no live push from FPL.
+- **Not guaranteed predictions** – Outputs are probabilistic and for decision support only.
 
 ---
 
-## License and disclaimer
+## License
 
-This project uses publicly available Fantasy Premier League API endpoints. It is not affiliated with, endorsed by, or connected to the Premier League or the official Fantasy Premier League game. Use of FPL data is subject to the terms and conditions of the FPL service.
-
-License: ISC.
+ISC. This project uses the public Fantasy Premier League API and is not affiliated with the Premier League or official FPL. Use of FPL data is subject to FPL’s terms.
