@@ -19,10 +19,12 @@ import { getEntryPredictionsQuerySchema } from "./getEntryPredictions.schemas";
 import type {
   GetEntryPredictionsResponse,
   PredictionPlayerDisplay,
+  ScenarioConfigDisplay,
 } from "./getEntryPredictions.types";
 import {
   predictionsCacheKey,
   mapPredictionsToDisplay,
+  mapScenariosToDisplay,
 } from "./getEntryPredictions.utils";
 
 /**
@@ -53,8 +55,13 @@ export async function getEntryPredictionsHandler(
   }
 
   const { leagueId, entryId } = paramsResult.data;
-  const { limit, eventId: eventIdQuery, riskProfile: riskProfileQuery } =
-    queryResult.data;
+  const {
+    limit,
+    eventId: eventIdQuery,
+    riskProfile: riskProfileQuery,
+    includeScenarios,
+    includeComponents,
+  } = queryResult.data;
   const riskProfile = parseRiskProfile(riskProfileQuery);
 
   const eventIdResult = await resolveAndValidateEventId(prisma, eventIdQuery);
@@ -90,7 +97,9 @@ export async function getEntryPredictionsHandler(
     entryId,
     eventId,
     limit,
-    riskProfile
+    riskProfile,
+    includeScenarios,
+    includeComponents
   );
   const cached = await cache.get<GetEntryPredictionsResponse>(cacheKey);
   if (cached !== null) {
@@ -101,6 +110,11 @@ export async function getEntryPredictionsHandler(
   let predictions: Awaited<
     ReturnType<typeof predictTransfersForEntry>
   >["predictions"];
+  /** Raw scenarios from engine (bundles have numeric outs/ins). */
+  let rawScenarios: Awaited<
+    ReturnType<typeof predictTransfersForEntry>
+  >["scenarios"];
+  let scenarioConfig: ScenarioConfigDisplay | undefined;
   try {
     const result = await predictTransfersForEntry({
       leagueId,
@@ -108,8 +122,20 @@ export async function getEntryPredictionsHandler(
       eventId,
       maxResults: limit,
       riskProfile,
+      includeScenarios,
     });
     predictions = result.predictions;
+    rawScenarios = result.scenarios;
+    scenarioConfig = result.scenarioConfig
+      ? {
+          riskProfile: result.scenarioConfig.riskProfile,
+          beamWidth: result.scenarioConfig.beamWidth,
+          resultsPerK: result.scenarioConfig.resultsPerK,
+          sellPool: result.scenarioConfig.sellPool,
+          buyPoolPerPosition: result.scenarioConfig.buyPoolPerPosition,
+          maxEdgesPerOut: result.scenarioConfig.maxEdgesPerOut,
+        }
+      : undefined;
   } catch (err) {
     if (err instanceof SquadNotFoundError || err instanceof InvalidSquadError) {
       await reply.status(409).send({
@@ -124,11 +150,21 @@ export async function getEntryPredictionsHandler(
   }
 
   const transferPredictions = predictions.filter(isTransferPrediction);
-  const playerIds = [
+  let playerIds = [
     ...new Set(
       transferPredictions.flatMap((p) => [p.outPlayerId, p.inPlayerId])
     ),
   ];
+  if (rawScenarios !== undefined) {
+    const scenarioPlayerIds = new Set<number>();
+    for (const scenario of rawScenarios) {
+      for (const bundle of scenario.bundles) {
+        bundle.outs.forEach((id) => scenarioPlayerIds.add(id));
+        bundle.ins.forEach((id) => scenarioPlayerIds.add(id));
+      }
+    }
+    playerIds = [...new Set([...playerIds, ...scenarioPlayerIds])];
+  }
 
   const players =
     playerIds.length > 0
@@ -160,15 +196,24 @@ export async function getEntryPredictionsHandler(
   );
 
   const displayPredictions = mapPredictionsToDisplay(predictions, playerMap);
+  const generatedAt = new Date().toISOString();
 
   const response: GetEntryPredictionsResponse = {
     meta: {
       leagueId,
       entryId,
       eventId,
-      generatedAt: new Date().toISOString(),
+      generatedAt,
+      ...(scenarioConfig !== undefined && { scenarioConfig }),
     },
     predictions: displayPredictions,
+    ...(rawScenarios !== undefined && {
+      scenarios: mapScenariosToDisplay(
+        rawScenarios,
+        playerMap,
+        includeComponents
+      ),
+    }),
   };
 
   await cache.set(cacheKey, response, PREDICTIONS_CACHE_TTL_SECONDS);

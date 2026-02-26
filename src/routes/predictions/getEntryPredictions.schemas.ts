@@ -14,4 +14,8 @@ export const getEntryPredictionsQuerySchema = z.object({
     .max(MAX_LIMIT)
     .default(DEFAULT_LIMIT),
   riskProfile: z.enum(["safe", "balanced", "risky"]).optional(),
+  /** When true, include transfer bundle scenarios (k=1..3) in the response. */
+  includeScenarios: z.coerce.boolean().optional().default(false),
+  /** When true with includeScenarios, include per-transfer components in each bundle. */
+  includeComponents: z.coerce.boolean().optional().default(false),
 });

@@ -17,26 +17,37 @@ describe("percentile", () => {
 
 describe("normaliseMomentum", () => {
   it("value=0 => 0", () => {
-    expect(normaliseMomentum({ value: 0, p95: 100 })).toBe(0);
-    expect(normaliseMomentum({ value: 0, p95: 1 })).toBe(0);
+    expect(normaliseMomentum({ value: 0, cap: 100 })).toBe(0);
+    expect(normaliseMomentum({ value: 0, cap: 1 })).toBe(0);
   });
 
-  it("value=p95 => ~1", () => {
-    const p95 = 100;
-    const m = normaliseMomentum({ value: p95, p95 });
+  it("value=cap => ~1", () => {
+    const cap = 100;
+    const m = normaliseMomentum({ value: cap, cap });
     expect(m).toBeCloseTo(1, 5);
   });
 
-  it("value>p95 => 1 (clamped)", () => {
-    expect(normaliseMomentum({ value: 200, p95: 100 })).toBe(1);
-    expect(normaliseMomentum({ value: 1000, p95: 50 })).toBe(1);
+  it("value>cap => 1 (clamped)", () => {
+    expect(normaliseMomentum({ value: 200, cap: 100 })).toBe(1);
+    expect(normaliseMomentum({ value: 1000, cap: 50 })).toBe(1);
   });
 
-  it("when p95 is 0 and value > 0 returns 1", () => {
-    expect(normaliseMomentum({ value: 1, p95: 0 })).toBe(1);
+  it("when cap is 0 and value > 0 returns 1", () => {
+    expect(normaliseMomentum({ value: 1, cap: 0 })).toBe(1);
   });
 
-  it("when p95 is 0 and value is 0 returns 0", () => {
-    expect(normaliseMomentum({ value: 0, p95: 0 })).toBe(0);
+  it("when cap is 0 and value is 0 returns 0", () => {
+    expect(normaliseMomentum({ value: 0, cap: 0 })).toBe(0);
+  });
+
+  it("with shapePower 1.0 behaves like no shaping", () => {
+    expect(normaliseMomentum({ value: 100, cap: 100, shapePower: 1 })).toBeCloseTo(1, 5);
+  });
+
+  it("with shapePower > 1 reduces saturation at high end", () => {
+    const without = normaliseMomentum({ value: 80, cap: 100 });
+    const withShape = normaliseMomentum({ value: 80, cap: 100, shapePower: 1.2 });
+    expect(withShape).toBeLessThan(without);
+    expect(withShape).toBeGreaterThan(0);
   });
 });

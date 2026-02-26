@@ -32,7 +32,6 @@ export const SELL_REASON = {
   LEAGUE_WIDELY_OWNED: "Widely owned in your league (less urgency to sell)",
   FLAGGED: "Flagged / availability concern",
   UNAVAILABLE: "Unavailable",
-  CAPTAIN_OR_VICE: "Captain/vice captain",
   TEMPLATE_HOLD: "High-ownership template hold",
   /** Safe profile: discourage selling template without strong reason. */
   SAFE_AVOID_RISKY_SELL_TEMPLATE: "Avoiding a risky sell of a template player",

@@ -37,7 +37,7 @@ export function extractSellFeatures(
       isCaptainOrVice: pick.isCaptain || pick.isViceCaptain,
       nowCost,
       transfersOutEvent,
-      momentumOut: 0, // set by score.ts after p95
+      momentumOut: 0, // set by score.ts after momentum cap (p99)
       upcomingFixtureScore,
       leagueOwnershipPct: null, // set by score.ts
     });

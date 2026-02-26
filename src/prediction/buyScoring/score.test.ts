@@ -19,7 +19,7 @@ vi.mock("../leagueOwnership/compute", () => ({
   }),
 }));
 vi.mock("../momentum/p95", () => ({
-  loadMomentumP95: vi.fn().mockResolvedValue({ inP95: 100, outP95: 100 }),
+  loadMomentumP95: vi.fn().mockResolvedValue({ inP99: 100, outP99: 100 }),
 }));
 
 import { getLeagueOwnership } from "../leagueOwnership/compute";

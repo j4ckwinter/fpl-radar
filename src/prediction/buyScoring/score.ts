@@ -1,6 +1,7 @@
 import { loadTeamUpcomingFixtureScores } from "../fixtures/teamUpcomingScores";
 import { getLeagueOwnership } from "../leagueOwnership/compute";
 import { loadMomentumP95 } from "../momentum/p95";
+import { MOMENTUM_SHAPE_POWER } from "../momentum/constants";
 import { normaliseMomentum } from "../momentum/normalise";
 import { parseRiskProfile } from "../riskProfile";
 import { loadBuyContext } from "./context";
@@ -46,7 +47,7 @@ export async function scoreBuyCandidates(
   const { ownedPlayerIds } = await loadBuyContext({ leagueId, entryId, eventId });
 
   const poolLimit = limit ?? BUY_SCORE.MOMENTUM_POOL_LIMIT;
-  const [pool, teamUpcomingScores, leagueOwnership, { inP95 }] = await Promise.all([
+  const [pool, teamUpcomingScores, leagueOwnership, { inP99 }] = await Promise.all([
     loadBuyPool({ ownedPlayerIds, limit: poolLimit }),
     loadTeamUpcomingFixtureScores({ eventId }),
     getLeagueOwnership({ leagueId, eventId }),
@@ -68,7 +69,8 @@ export async function scoreBuyCandidates(
 
     const momentumIn = normaliseMomentum({
       value: p.transfersInEvent,
-      p95: inP95,
+      cap: inP99,
+      shapePower: MOMENTUM_SHAPE_POWER,
     });
     const fixture01 = normaliseFixtureScore(upcomingFixtureScore);
 

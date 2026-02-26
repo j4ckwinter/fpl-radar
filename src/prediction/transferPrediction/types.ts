@@ -4,6 +4,8 @@ export interface PredictTransfersForEntryParams {
   eventId: number;
   maxResults?: number;
   riskProfile?: "safe" | "balanced" | "risky";
+  /** When true, include transfer bundle scenarios (k=1..3) in the response. */
+  includeScenarios?: boolean;
 }
 
 export interface TransferPrediction {

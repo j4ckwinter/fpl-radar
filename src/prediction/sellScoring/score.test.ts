@@ -19,7 +19,7 @@ vi.mock("../leagueOwnership/compute", () => ({
   }),
 }));
 vi.mock("../momentum/p95", () => ({
-  loadMomentumP95: vi.fn().mockResolvedValue({ inP95: 100, outP95: 100 }),
+  loadMomentumP95: vi.fn().mockResolvedValue({ inP99: 100, outP99: 100 }),
 }));
 vi.mock("./features", () => ({
   extractSellFeatures: vi.fn(),
@@ -237,7 +237,7 @@ describe("scoreSellCandidates", () => {
     }
   });
 
-  it("adds reasons for flagged, benched, captain, and news", async () => {
+  it("adds reasons for flagged and news", async () => {
     vi.mocked(extractSellFeatures).mockReturnValue(
       new Map([
         [
@@ -246,7 +246,7 @@ describe("scoreSellCandidates", () => {
             isFlagged: true,
             hasNews: true,
             isBenched: true,
-            isCaptainOrVice: true,
+            isCaptainOrVice: false,
             selectedByPercent: 35,
           }),
         ],
@@ -262,7 +262,6 @@ describe("scoreSellCandidates", () => {
     const result = await scoreSellCandidates({ leagueId, entryId, eventId });
 
     expect(result.scores[0].reasons).toContain("Flagged / availability concern");
-    expect(result.scores[0].reasons).toContain("Captain/vice captain");
     expect(result.scores[0].reasons.some((r) => r.startsWith("News:"))).toBe(
       true
     );

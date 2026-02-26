@@ -14,16 +14,23 @@ export function percentile(values: number[], p: number): number {
 
 /**
  * Normalises transfer momentum (transfers in/out this GW) to 0..1 using a log scale.
- * m = log(1+value) / log(1+p95), clamped to [0, 1].
- * When p95 is 0, returns value > 0 ? 1 : 0.
+ * m = log(1+value) / log(1+cap), clamped to [0, 1].
+ * Optional shapePower (default 1.0): applied as m^shapePower to reduce saturation at 1.0.
+ * When cap is 0 or invalid, uses fallback divisor to avoid divide-by-zero.
  */
 export function normaliseMomentum(params: {
   value: number;
-  p95: number;
+  /** Cap value (e.g. p99 of transfers); used as divisor in log normalisation. */
+  cap: number;
+  shapePower?: number;
 }): number {
-  const { value, p95 } = params;
+  const { value, cap, shapePower = 1 } = params;
   if (value <= 0) return 0;
-  if (p95 <= 0) return 1;
-  const m = Math.log(1 + value) / Math.log(1 + p95);
+  const divisor = cap > 0 ? cap : 1;
+  let m = Math.log(1 + value) / Math.log(1 + divisor);
+  m = Math.max(0, Math.min(1, m));
+  if (shapePower !== 1 && shapePower > 0) {
+    m = Math.pow(m, shapePower);
+  }
   return Math.max(0, Math.min(1, m));
 }

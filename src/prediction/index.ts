@@ -35,3 +35,10 @@ export type {
 } from "./transferPrediction";
 export { SquadNotFoundError, InvalidSquadError } from "./errors";
 export type { SquadState, TransferCandidate } from "./types";
+export {
+  generateTransferScenarios,
+  type GenerateTransferScenariosParams,
+  type TransferBundleScenario,
+  type TransferBundle,
+  type TransferBundleComponent,
+} from "./scenarios";

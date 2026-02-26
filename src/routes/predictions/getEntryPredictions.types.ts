@@ -43,6 +43,44 @@ export type EntryPredictionDisplay =
   | TransferPredictionDisplay
   | NoTransferPredictionDisplay;
 
+/** Display shape for one bundle within a scenario (enriched for API). */
+export interface ScenarioBundleDisplay {
+  /** Stable id for keys (k + out ids + in ids). */
+  bundleId: string;
+  /** OUT players. */
+  outs: PredictionPlayerDisplay[];
+  /** IN players. */
+  ins: PredictionPlayerDisplay[];
+  score: number;
+  /** Probability within this scenario's k (bundles in same k sum to 1). */
+  probability: number;
+  reasons: string[];
+  flags: { budgetUncertain?: boolean; likelyHit?: boolean };
+  /** Present only when includeComponents=true. */
+  components?: Array<{
+    outPlayerId: number;
+    inPlayerId: number;
+    score: number;
+    reasons: string[];
+  }>;
+}
+
+/** Display shape for one scenario (k=1, 2, or 3). */
+export interface ScenarioDisplay {
+  k: 1 | 2 | 3;
+  bundles: ScenarioBundleDisplay[];
+}
+
+/** Scenario config under meta when includeScenarios=true. */
+export interface ScenarioConfigDisplay {
+  riskProfile?: "safe" | "balanced" | "risky";
+  beamWidth: number;
+  resultsPerK: number;
+  sellPool: number;
+  buyPoolPerPosition: number;
+  maxEdgesPerOut: number;
+}
+
 /** API response for GET entry predictions. */
 export interface GetEntryPredictionsResponse {
   meta: {
@@ -50,6 +88,10 @@ export interface GetEntryPredictionsResponse {
     entryId: number;
     eventId: number;
     generatedAt: string;
+    /** Present when includeScenarios=true. */
+    scenarioConfig?: ScenarioConfigDisplay;
   };
   predictions: EntryPredictionDisplay[];
+  /** Present when includeScenarios=true. */
+  scenarios?: ScenarioDisplay[];
 }

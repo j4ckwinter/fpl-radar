@@ -3,6 +3,7 @@ import { SquadNotFoundError } from "../errors";
 import { loadTeamUpcomingFixtureScores } from "../fixtures/teamUpcomingScores";
 import { getLeagueOwnership } from "../leagueOwnership/compute";
 import { loadMomentumP95 } from "../momentum/p95";
+import { MOMENTUM_SHAPE_POWER } from "../momentum/constants";
 import { normaliseMomentum } from "../momentum/normalise";
 import { parseRiskProfile } from "../riskProfile";
 import { normaliseFixtureScore } from "../buyScoring/score.utils";
@@ -55,7 +56,7 @@ export async function scoreSellCandidates(
   }
 
   const playerIds = snapshot.picks.map((p) => p.playerId);
-  const [players, teamUpcomingScores, leagueOwnership, { outP95 }] =
+  const [players, teamUpcomingScores, leagueOwnership, { outP99 }] =
     await Promise.all([
       prisma.fplPlayer.findMany({
         where: { id: { in: playerIds } },
@@ -110,7 +111,8 @@ export async function scoreSellCandidates(
   for (const [playerId, features] of featuresByPlayerId.entries()) {
     const momentumOut = normaliseMomentum({
       value: features.transfersOutEvent,
-      p95: outP95,
+      cap: outP99,
+      shapePower: MOMENTUM_SHAPE_POWER,
     });
     const fixtureGood01 = normaliseFixtureScore(features.upcomingFixtureScore);
     const fixtureBad01 = 1 - fixtureGood01;

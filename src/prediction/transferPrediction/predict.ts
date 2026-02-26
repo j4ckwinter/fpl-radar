@@ -3,6 +3,14 @@ import { generateSingleTransferCandidates } from "../candidateGenerator";
 import { scoreSellCandidates } from "../sellScoring";
 import { scoreBuyCandidates, loadBuyPool } from "../buyScoring";
 import {
+  generateTransferScenarios,
+  BEAM_WIDTH,
+  RESULTS_PER_K,
+  SELL_POOL,
+  BUY_POOL_PER_POSITION,
+  MAX_EDGES_PER_OUT,
+} from "../scenarios";
+import {
   DIVERSITY,
   TRANSFER_PREDICTION,
   PREDICTION_BUY_POOL_LIMIT,
@@ -19,12 +27,23 @@ import type {
   TransferPrediction,
   NoTransferPrediction,
 } from "./types";
+import type { TransferBundleScenario } from "../scenarios";
 
 export async function predictTransfersForEntry(
   params: PredictTransfersForEntryParams
 ): Promise<{
   predictions: (TransferPrediction | NoTransferPrediction)[];
   meta?: { droppedForDiversity: number };
+  scenarios?: TransferBundleScenario[];
+  scenarioConfig?: {
+    computedAt: string;
+    riskProfile?: "safe" | "balanced" | "risky";
+    beamWidth: number;
+    resultsPerK: number;
+    sellPool: number;
+    buyPoolPerPosition: number;
+    maxEdgesPerOut: number;
+  };
 }> {
   const {
     leagueId,
@@ -32,6 +51,7 @@ export async function predictTransfersForEntry(
     eventId,
     maxResults = DIVERSITY.MAX_RESULTS,
     riskProfile,
+    includeScenarios = false,
   } = params;
 
   const squad = await loadSquadState({ leagueId, entryId, eventId });
@@ -179,10 +199,44 @@ export async function predictTransfersForEntry(
     p.probability = probs[i];
   });
 
-  return {
+  const result: {
+    predictions: (TransferPrediction | NoTransferPrediction)[];
+    meta?: { droppedForDiversity: number };
+    scenarios?: TransferBundleScenario[];
+    scenarioConfig?: {
+      computedAt: string;
+      riskProfile?: "safe" | "balanced" | "risky";
+      beamWidth: number;
+      resultsPerK: number;
+      sellPool: number;
+      buyPoolPerPosition: number;
+      maxEdgesPerOut: number;
+    };
+  } = {
     predictions: fullList,
     ...(dropped > 0 && { meta: { droppedForDiversity: dropped } }),
   };
+
+  if (includeScenarios) {
+    const scenarioResult = await generateTransferScenarios({
+      leagueId,
+      entryId,
+      eventId,
+      riskProfile,
+    });
+    result.scenarios = scenarioResult.scenarios;
+    result.scenarioConfig = {
+      computedAt: scenarioResult.computedAt,
+      riskProfile: scenarioResult.riskProfile,
+      beamWidth: BEAM_WIDTH,
+      resultsPerK: RESULTS_PER_K,
+      sellPool: SELL_POOL,
+      buyPoolPerPosition: BUY_POOL_PER_POSITION,
+      maxEdgesPerOut: MAX_EDGES_PER_OUT,
+    };
+  }
+
+  return result;
 }
 
 function buildNoTransferIfNeeded(
