@@ -41,6 +41,12 @@ Insights are explicit and risk-aware so you can plan with rival behaviour in min
 - **Weak-link penalty** so “strong sell + weak buy” pairs rank lower; diversity caps (e.g. max 2 per OUT/IN) keep the list varied while staying score-ordered.
 - Enriched with player/team/position and reasons (sell/buy signals, budget, etc.).
 
+### Multiple transfer scenarios (k=1, k=2, k=3)
+
+- Optional **scenario bundles** for single, double, and triple transfers: same sell/buy scoring and constraints, with beam search for k=2 and k=3 to find high-scoring bundles (e.g. “sell A+B, buy X+Y”).
+- Returned when `includeScenarios=true` on the predictions endpoint: each scenario has `k`, `bundles` (with player summaries, scores, probabilities per bundle, reasons), and optional per-transfer `components` when `includeComponents=true`.
+- Config (beam width, pool sizes, etc.) and stable `bundleId` format are in the response; probabilities are normalised within each scenario.
+
 ### League radar
 
 - League-wide **top buys**, **top sells**, and **top transfers** across entries (with optional `maxEntries` and `concurrency`).
@@ -222,7 +228,7 @@ Base URL: `http://localhost:3000` (or your `PORT`).
 | Method | Path | Description |
 |--------|------|-------------|
 | **GET** | `/league/:leagueId` | League overview: metadata + rivals. Query: `limit`, `offset`, `eventId`. |
-| **GET** | `/league/:leagueId/entry/:entryId/predictions` | Transfer predictions for one entry. Query: `eventId`, `limit`, **`riskProfile`** (`safe` \| `balanced` \| `risky`). May include a **NO_TRANSFER** item when appropriate. |
+| **GET** | `/league/:leagueId/entry/:entryId/predictions` | Transfer predictions for one entry. Query: `eventId`, `limit`, **`riskProfile`** (`safe` \| `balanced` \| `risky`), **`includeScenarios`** (optional; when true, include k=1..3 scenario bundles), **`includeComponents`** (optional; when true with scenarios, include per-transfer components in each bundle). May include a **NO_TRANSFER** item when appropriate. |
 | **GET** | `/league/:leagueId/radar` | League radar: top buys, sells, transfers. Query: `eventId`, `maxEntries`, `concurrency`. |
 | **POST** | `/league/:leagueId/refresh` | Enqueue league refresh. Body (optional): `eventId`, `maxEntries`, `force`. Returns `jobId`. |
 | **GET** | `/jobs/:jobId` | Job status: `state`, `progress`, `result`, `error`. |
@@ -240,6 +246,16 @@ curl -s "http://localhost:3000/league/133057/entry/1328234/predictions?eventId=2
 # Risky (differentials with conviction)
 curl -s "http://localhost:3000/league/133057/entry/1328234/predictions?eventId=27&limit=10&riskProfile=risky" | jq .
 ```
+
+### Example: predictions with scenarios
+
+Include transfer bundle scenarios (k=1, k=2, k=3) in the response:
+
+```bash
+curl -s "http://localhost:3000/league/133057/entry/1328234/predictions?eventId=27&limit=20&riskProfile=balanced&includeScenarios=true" | jq .
+```
+
+Add `includeComponents=true` to include per-transfer breakdowns inside each bundle.
 
 ### Example: league radar
 
@@ -261,6 +277,7 @@ curl -s "http://localhost:3000/league/133057/radar?eventId=27" | jq .
 | `pnpm ingest:entry-picks` | Ingest entry picks for league/event. |
 | `pnpm ingest:entry-transfers` | Ingest entry transfer history. |
 | `pnpm predict:transfers` | Run transfer predictions (script; uses `FPL_LEAGUE_ID`, `FPL_ENTRY_ID`, `FPL_RISK_PROFILE`). |
+| `pnpm predict:scenarios` | Run scenario generation (k=1..3 bundles) for an entry (script; uses `FPL_LEAGUE_ID`, `FPL_ENTRY_ID`, `FPL_EVENT_ID`). |
 | `pnpm predict:league-radar` | Run league radar (script). |
 | **`pnpm predict:compare-profiles`** | Compare top buys/sells/transfers across safe, balanced, risky for one entry (debug). |
 | **`pnpm validate:ranking`** | Run ranking + predictions tests and print validation checklist. |
@@ -278,9 +295,10 @@ curl -s "http://localhost:3000/league/133057/radar?eventId=27" | jq .
 - API (Fastify), FPL client (caching, Zod), Prisma, BullMQ worker.
 - Ingestion: bootstrap, league standings, entry picks, entry transfers; league refresh job (standings → picks → transfers → radar).
 - **Transfer predictions**: sell/buy scoring, candidates, diversity (score-ordered + caps), weak-link penalty, NO_TRANSFER when weak signals, softmax probabilities.
+- **Multiple transfer scenarios**: beam search for k=2 and k=3 bundles; optional `includeScenarios` and `includeComponents` on the predictions endpoint; bundle reasons, probabilities per scenario, stable `bundleId`.
 - **Risk profiles v1.1**: safe/balanced/risky with ownership curves, league-size aware thresholds, risky conviction gating, profile-specific reasons.
 - **Ranking v1.3**: score-respecting diversity, no safe-only transfer penalty, probabilities on final list.
-- Endpoints: league overview, entry predictions (with `riskProfile`), league radar, refresh, job status.
+- Endpoints: league overview, entry predictions (with `riskProfile`, `includeScenarios`, `includeComponents`), league radar, refresh, job status.
 
 **Roadmap**
 
